@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "CodaExpress",
+    "slug": "CodaExpress",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/codaexpress-logo.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/codaexpress-logo.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.CodaExpress"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-image"
+      
+    ]
+  }
+}
