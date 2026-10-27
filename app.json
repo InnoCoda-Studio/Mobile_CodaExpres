@@ -16,6 +16,7 @@
         "backgroundImage": "./assets/codaexpress-logo.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "softwareKeyboardLayoutMode": "pan",
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.CodaExpress"
     },
@@ -24,8 +25,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-image"
-      
+      "expo-image",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "pk.eyJ1IjoiaW5ub2NvZGEiLCJhIjoiY212ZjE3NXBnMDBndTJ5cjI2bnkzejg1eiJ9.qbPEK--lMHUSft-0yMqRsg"
+        }
+      ]
     ]
   }
 }

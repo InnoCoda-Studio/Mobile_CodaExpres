@@ -3,10 +3,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Image,
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 interface ApprovedProps {

@@ -26,6 +26,10 @@ import UnderReview from './src/RiderUnboading/UnderReview';
 import ApplicationSubmitted from './src/RiderUnboading/ApplicationSubmitted';
 import NinVerification from './src/RiderUnboading/NinVerification';
 import { updateRiderProfile } from './src/api/client';
+import CustomerTabs from './src/CustormerScreen/Navigation/CustomerTabs';
+import { NavigationContainer } from '@react-navigation/native';
+
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // Forgot Password Flow Screens
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
@@ -59,6 +63,7 @@ export default function App() {
     | 'ApplicationSubmitted'
     | 'NinVerification'
     | 'Approved'
+    | 'CustomerTabs'
   >('welcome');
 
   
@@ -101,13 +106,13 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
   const [resetOtpCode, setResetOtpCode] = useState('');
 
   return (
-    <>
-      <StatusBar style="light" />
+ <NavigationContainer>
+    <StatusBar style="light" />
 
       {/* WELCOME */}
       {currentScreen === 'welcome' && (
         <WelcomeScreen
-          onGetStarted={() => setCurrentScreen('ReviewApplication')}
+          onGetStarted={() => setCurrentScreen('customerHome')}
            //onGetStarted={() => setCurrentScreen('login')}
         />
       )}
@@ -223,12 +228,17 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
         />
       )}
 
-      {/* CUSTOMER HOME */}
-      {currentScreen === 'customerHome' && (
-        <CustomerHomeScreen
-          onLogout={() => setCurrentScreen('Login')}
-        />
-      )}
+  
+      {/* CUSTOMER HOME / TABS */}
+      {/* {currentScreen === "customerHome" && (
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <CustomerTabs />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      )} */}
+      {/* CUSTOMER HOME / TABS */}
+{currentScreen === "customerHome" && <CustomerTabs />}
 
       {/* RIDER HOME */}
       {currentScreen === 'riderHome' && (
@@ -371,6 +381,6 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
           onSuccess={() => setCurrentScreen('Login')}
         />
       )} */}
-    </>
+     </NavigationContainer>
   );
 }

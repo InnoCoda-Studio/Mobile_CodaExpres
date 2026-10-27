@@ -17,7 +17,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import PasswordInput from "../components/PasswordInput";
-
 interface CustomerSignupProps {
   phoneNumber: string;
   onBack: () => void;
