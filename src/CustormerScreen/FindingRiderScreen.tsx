@@ -40,7 +40,9 @@ export default function FindingRiderScreen() {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<FindingRoute>();
 
-  const { orderId } = route.params;
+  const { orderId, serviceType } = route.params;
+
+  const isShopping = serviceType === "shopping";
 
   const [demoAccepted, setDemoAccepted] = useState(false);
 
@@ -86,6 +88,23 @@ export default function FindingRiderScreen() {
       ]
     );
   };
+
+const handleRiderAccepted = () => {
+  setDemoAccepted(true);
+
+  if (serviceType === "shopping") {
+    navigation.replace("DeliveryTracking", {
+      orderId,
+      serviceType: "shopping",
+    });
+    return;
+  }
+
+  navigation.replace("DeliveryTracking", {
+    orderId,
+    serviceType: "delivery",
+  });
+};
 
   return (
     <View
@@ -140,17 +159,18 @@ export default function FindingRiderScreen() {
             </View>
           </View>
         </View>
-
+        {/* SEARCHING / RIDER ACCEPTED TITLE */}
         <Text className="text-white text-2xl font-extrabold text-center mt-6">
           {demoAccepted
             ? "Rider Accepted!"
             : "Searching for nearby riders"}
         </Text>
 
+        {/* DESCRIPTION */}
         <Text className="text-slate-400 text-sm text-center mt-3 leading-6">
           {demoAccepted
-            ? "Demo acceptance confirmed. Next, we'll open the live tracking screen."
-            : "We're preparing your shopping request for available riders in your area."}
+            ? "Demo acceptance confirmed. Next, we'll open the tracking screen."
+            : "We're preparing your request for available riders in your area."}
         </Text>
 
         <View className="bg-[#1E293B] border border-[#334155] rounded-2xl px-5 py-4 mt-8 w-full">
@@ -192,7 +212,7 @@ export default function FindingRiderScreen() {
         }}
       >
         <TouchableOpacity
-          onPress={() => setDemoAccepted(true)}
+         onPress={handleRiderAccepted}
           className="bg-[#E11D48] rounded-2xl py-4 items-center"
         >
           <Text className="text-white font-extrabold text-base">

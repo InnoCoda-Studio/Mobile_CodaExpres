@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BuyForMeItemsScreen from "./BuyForMeItemsScreen";
 import BuyForMeReviewScreen from "./BuyForMeReviewScreen";
+import BuyForMeVehicleScreen from "./BuyForMeVehicleScreen";
+import type { BuyForMeReviewOrder } from "./BuyForMeReviewScreen";
 
 export type MarketItem = {
   id: string;
@@ -121,6 +123,12 @@ export default function MarketSearchScreen({
   onSelectMarket,
   onOrderComplete,
 }: Props) {
+
+  console.log(
+  "[MarketSearchScreen] onOrderComplete received:",
+  typeof onOrderComplete
+);
+
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<
@@ -163,27 +171,35 @@ export default function MarketSearchScreen({
     setSelectedMarket(market);
   };
 
-// STEP 3: RENDER REVIEW & DISPATCH SCREEN
-  if (selectedMarket && orderItemsData) {
-    return (
-      <BuyForMeItemsScreen
-        market={selectedMarket}
-        items={orderItemsData.items}
-        requireReceipt={orderItemsData.requireReceipt}
-        totalEstimatedPrice={orderItemsData.totalEstimatedPrice}
-        currencySymbol="₦"
-        onBack={() => setOrderItemsData(null)} // 👈 Uncomment this so tapping back takes them to Step 2 (Items)
-        onConfirmOrder={(finalOrder) => {
-          console.log("Order confirmed and rider dispatched:", finalOrder);
-          if (onOrderComplete) {
-            onOrderComplete(finalOrder);
-          } else {
-            onBack();
-          }
-        }}
-      />
-    );
-  }
+
+
+if (selectedMarket && orderItemsData) {
+  const handleVehicleOrderComplete = (
+    finalOrder: BuyForMeReviewOrder
+  ) => {
+    console.log("[MarketSearchScreen] Order callback invoked");
+
+    onOrderComplete?.(finalOrder);
+  };
+
+  const vehicleProps = {
+    market: selectedMarket,
+    items: orderItemsData.items,
+    requireReceipt: orderItemsData.requireReceipt ?? false,
+    onBack: () => setOrderItemsData(null),
+    onOrderComplete: handleVehicleOrderComplete,
+  };
+
+  console.log("[MarketSearchScreen] Vehicle props:", {
+    callbackType: typeof vehicleProps.onOrderComplete,
+    market: vehicleProps.market.name,
+  });
+
+  return <BuyForMeVehicleScreen {...vehicleProps} />;
+}
+
+
+
 
   // STEP 2: RENDER ITEM SELECTION SCREEN
   if (selectedMarket) {

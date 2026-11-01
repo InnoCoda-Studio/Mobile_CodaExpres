@@ -4,6 +4,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BuyForMeReviewOrder } from "./BuyForMeReviewScreen";
 
+import {
+  useNavigation,
+} from "@react-navigation/native";
+
+import type {
+  NativeStackNavigationProp,
+} from "@react-navigation/native-stack";
+
+import type {
+  CustomerStackParamList,
+} from "./Navigation/CustomerTabs";
+
 type Props = {
   order: BuyForMeReviewOrder;
   onBack: () => void;
@@ -11,6 +23,7 @@ type Props = {
   onOrderPlaced?: (orderId: string) => void;
   onPreviewOrder?: () => void;
 };
+
 
 const money = (amount: number) => `₦${amount.toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
 
@@ -46,14 +59,31 @@ export default function BuyForMePlaceOrderScreen({
     }
   };
 
-  const handlePlaceOrderPress = () => {
+const handlePlaceOrderPress = () => {
   if (onPlaceOrder) {
     void placeOrder();
     return;
   }
 
-  // Frontend testing only — does not create an order
-  onPreviewOrder?.();
+  // Frontend demo: navigate without creating a real order.
+  if (onPreviewOrder) {
+    onPreviewOrder();
+    return;
+  }
+
+  handlePreviewOrder();
+};
+
+
+const navigation =useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+
+const handlePreviewOrder = () => {
+  const orderId = `SHOP-${Date.now()}`;
+
+  navigation.navigate("FindingRider", {
+    orderId,
+    serviceType: "shopping",
+  });
 };
 
   const Detail = ({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) => (
@@ -120,9 +150,15 @@ export default function BuyForMePlaceOrderScreen({
         </View>
 
         {!hasRealRoute && <View className="bg-amber-950/30 border border-amber-800/50 rounded-2xl p-3 mb-4"><Text className="text-amber-300 text-xs font-bold">A real market-to-drop-off route is required before placing an order. The 5 km preview cannot be used for dispatch.</Text></View>}
-        {!onPlaceOrder && <View className="bg-darkCard border border-darkBorder rounded-2xl p-3 mb-4"><Text className="text-slate-300 text-xs">Order posting is not connected to the backend yet. You can review this page, but the Place Order button stays disabled.</Text></View>}
-
-        <TouchableOpacity onPress={() => setAgreed(!agreed)} activeOpacity={0.85} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} className="flex-row items-start mb-2">
+        {!onPlaceOrder && (
+          <View className="bg-darkCard border border-darkBorder rounded-2xl p-3 mb-4">
+            <Text className="text-slate-300 text-xs">
+              Frontend demo mode. Continue to preview rider searching
+              without placing a real order.
+            </Text>
+          </View>
+        )}
+          <TouchableOpacity onPress={() => setAgreed(!agreed)} activeOpacity={0.85} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} className="flex-row items-start mb-2">
           <Ionicons name={agreed ? "checkbox" : "square-outline"} size={24} color={agreed ? "#E11D48" : "#94A3B8"} />
           <Text className="text-slate-300 text-xs leading-5 ml-3 flex-1">I have checked my shopping list and delivery details. I understand the amounts shown are estimates and final charges must be confirmed.</Text>
         </TouchableOpacity>
@@ -131,7 +167,7 @@ export default function BuyForMePlaceOrderScreen({
       <View className="bg-darkBg border-t border-darkBorder px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
         <View className="flex-row items-center justify-between mb-3"><Text className="text-slate-400 text-sm">Estimated total</Text><Text className="text-white text-lg font-extrabold">{order.estimatedTotal === null ? "Pending" : money(order.estimatedTotal)}</Text></View>
       <TouchableOpacity
-  disabled={onPlaceOrder ? !ready : !agreed || !onPreviewOrder}
+disabled={onPlaceOrder ? !ready : !agreed}
   onPress={handlePlaceOrderPress}
   activeOpacity={0.85}
   className={`rounded-[18px] py-4 flex-row justify-center items-center ${
@@ -156,7 +192,9 @@ export default function BuyForMePlaceOrderScreen({
     </>
   )}
 </TouchableOpacity>
-        <Text className="text-slate-500 text-[11px] text-center mt-2">Rider search and tracking start only after the server accepts your order.</Text>
+        <Text className="text-slate-500 text-[11px] text-center mt-2">
+          Demo preview only. No real rider request or payment will be made.
+        </Text>
       </View>
     </View>
   );

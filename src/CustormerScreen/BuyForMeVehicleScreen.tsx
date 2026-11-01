@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BuyForMeReviewScreen from "./BuyForMeReviewScreen";
 import type { MarketItem } from "./MarketSearchScreen";
 import type { ShoppingItem } from "./BuyForMeItemsScreen";
+import type { BuyForMeReviewOrder } from "./BuyForMeReviewScreen";
+
 
 export type BuyForMeVehicle = {
   id: "bicycle" | "motorcycle" | "car";
@@ -27,13 +29,17 @@ export type BuyForMeVehicle = {
   distanceKm?: number;
 };
 
+
 type Props = {
   market: MarketItem;
   items: ShoppingItem[];
   requireReceipt: boolean;
   distanceKm?: number;
   onBack: () => void;
+  onOrderComplete: (order: BuyForMeReviewOrder) => void;
 };
+
+
 
 const VEHICLES: BuyForMeVehicle[] = [
   {
@@ -198,14 +204,21 @@ function VehicleCard({
     </Animated.View>
   );
 }
-
 export default function BuyForMeVehicleScreen({
   market,
   items = [],
   requireReceipt,
   distanceKm,
   onBack,
+  onOrderComplete,
 }: Props) {
+
+    console.log(
+    "[BuyForMeVehicleScreen] onOrderComplete:",
+    typeof onOrderComplete
+  );
+
+
   const insets = useSafeAreaInsets();
 
   const [showReview, setShowReview] = useState(false);
@@ -263,12 +276,23 @@ export default function BuyForMeVehicleScreen({
       deliveryFee={reviewVehicle.estimatedDeliveryFee}
       distanceKm={reviewVehicle.distanceKm}
       onBack={() => setShowReview(false)}
-      onConfirmOrder={(order) => {
-        console.log("Order ready for placement:", order);
+     
+  onConfirmOrder={(order) => {
+  console.log("[BuyForMeVehicleScreen] Confirmed order:", order);
+  console.log(
+    "[BuyForMeVehicleScreen] onOrderComplete type:",
+    typeof onOrderComplete
+  );
 
-        // Next step:
-        // Connect to the Place Order screen.
-      }}
+  if (typeof onOrderComplete !== "function") {
+    console.error(
+      "[BuyForMeVehicleScreen] onOrderComplete was not passed by the parent."
+    );
+    return;
+  }
+
+  onOrderComplete(order);
+}}
     />
   );
 }
@@ -503,7 +527,7 @@ onPress={() => {
   setReviewVehicle({
     ...selectedVehicle,
     estimatedDeliveryFee: deliveryFee,
-    distanceKm: pricingDistance,
+    distanceKm: hasRouteDistance ? distanceKm : undefined,
   });
 
   setShowReview(true);

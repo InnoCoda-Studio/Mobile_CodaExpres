@@ -18,14 +18,37 @@ import PackageDelivery from "../PackageDelivery";
 import BuyForMeFlowScreen from "../BuyForMeFlowScreen";
 import FindingRiderScreen from "../FindingRiderScreen";
 import OrdersScreen from "../OrdersScreen";
-
+import BuyForMeTrackingScreen from "../BuyForMeTrackingScreen";
+import DeliveryTrackingScreen from "../DeliveryTrackingScreen";
+import WalletScreen from "../WalletScreen";
+import ProfileScreen from "../ProfileScreen";
 
 // Root stack parameter types
+// export type CustomerStackParamList = {
+//   MainTabs: undefined;
+//   PackageDelivery: undefined;
+//   BuyForMe: undefined;
+//   FindingRider: { orderId: string };
+// };
+
 export type CustomerStackParamList = {
   MainTabs: undefined;
   PackageDelivery: undefined;
   BuyForMe: undefined;
-  FindingRider: { orderId: string };
+
+  FindingRider: {
+    orderId: string;
+    serviceType: "delivery" | "shopping";
+  };
+
+  BuyForMeTracking: {
+    orderId: string;
+  };
+
+  DeliveryTracking: {
+    orderId: string;
+    serviceType: "delivery" | "shopping";
+  };
 };
 
 // Bottom tab parameter types
@@ -55,26 +78,26 @@ const Stack = createNativeStackNavigator<CustomerStackParamList>();
 // }
 
 // Temporary Wallet Screen
-function WalletScreen() {
-  return (
-    <View className="flex-1 bg-[#090D16] justify-center items-center">
-      <Text className="text-white font-bold text-lg">
-        Wallet
-      </Text>
-    </View>
-  );
-}
+// function WalletScreen() {
+//   return (
+//     <View className="flex-1 bg-[#090D16] justify-center items-center">
+//       <Text className="text-white font-bold text-lg">
+//         Wallet
+//       </Text>
+//     </View>
+//   );
+// }
 
 // Temporary Profile Screen
-function ProfileScreen() {
-  return (
-    <View className="flex-1 bg-[#090D16] justify-center items-center">
-      <Text className="text-white font-bold text-lg">
-        Customer Profile
-      </Text>
-    </View>
-  );
-}
+// function ProfileScreen() {
+//   return (
+//     <View className="flex-1 bg-[#090D16] justify-center items-center">
+//       <Text className="text-white font-bold text-lg">
+//         Customer Profile
+//       </Text>
+//     </View>
+//   );
+// }
 
 // Bottom Tab Navigator
 function CustomerTabNavigator() {
@@ -197,6 +220,17 @@ export default function CustomerTabs() {
         name="FindingRider"
         component={FindingRiderScreen}
       />
+
+      <Stack.Screen
+        name="BuyForMeTracking"
+        component={BuyForMeTrackingScreen}
+      />
+
+      {/* <Stack.Screen
+      name="DeliveryTracking"
+      component={DeliveryTrackingScreen}
+    /> */}
+          
     </Stack.Navigator>
   );
 }

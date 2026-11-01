@@ -16,9 +16,6 @@ import type { ShoppingItem } from "./BuyForMeItemsScreen";
 import type { BuyForMeVehicle } from "./BuyForMeVehicleScreen";
 import BuyForMePlaceOrderScreen from "./BuyForMePlaceOrderScreen";
 
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { CustomerStackParamList } from "./Navigation/CustomerTabs";
 
 
 export type BuyForMeReviewOrder = {
@@ -66,8 +63,6 @@ export default function BuyForMeReviewScreen({
   onConfirmOrder,
 }: Props) {
   const insets = useSafeAreaInsets();
-
-  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   const [deliveryAddress, setDeliveryAddress] = useState(initialDeliveryAddress);
 
@@ -148,31 +143,20 @@ const handleContinue = () => {
     </View>
   );
 
-  if (placeOrderData) {
+
+if (placeOrderData) {
   return (
     <BuyForMePlaceOrderScreen
       order={placeOrderData}
       onBack={() => setPlaceOrderData(null)}
       onPreviewOrder={() => {
-        navigation.navigate("FindingRider", {
-          orderId: "DEMO-CDX-001",
-        });
+        onConfirmOrder(placeOrderData);
       }}
     />
+
+    
   );
 }
-
-// if (placeOrderData) {
-//   return (
-//     <BuyForMePlaceOrderScreen
-//       order={placeOrderData}
-//       onBack={() => setPlaceOrderData(null)}
-//       onPreviewOrder={() => {
-//         console.log("Open Finding Rider preview");
-//       }}
-//     />
-//   );
-// }
 
   return (
     <KeyboardAvoidingView
@@ -362,7 +346,7 @@ const handleContinue = () => {
           {validDeliveryFee !== null && <Ionicons name="arrow-forward" size={19} color="#FFFFFF" style={{ marginLeft: 10 }} />}
         </TouchableOpacity>
         <Text className="text-slate-500 text-[11px] text-center mt-2">
-          No payment or dispatch happens on this screen.
+          Demo preview only. No real rider request or payment will be made.
         </Text>
       </View>
     </KeyboardAvoidingView>
