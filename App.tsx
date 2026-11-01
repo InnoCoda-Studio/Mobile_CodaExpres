@@ -112,8 +112,8 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
       {/* WELCOME */}
       {currentScreen === 'welcome' && (
         <WelcomeScreen
-          onGetStarted={() => setCurrentScreen('customerHome')}
-           //onGetStarted={() => setCurrentScreen('login')}
+          //onGetStarted={() => setCurrentScreen('customerHome')}
+           onGetStarted={() => setCurrentScreen('login')}
         />
       )}
 
@@ -373,14 +373,7 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
           onNext={() => setCurrentScreen('riderHome')} // Fixed: Moves directly to the Rider Dashboard when approved
         />
       )}
-      {/* {currentScreen === 'resetConfirm' && (
-        <ResetPasswordConfirmScreen
-          identifier={resetPhoneNumber || resetEmail} // Fixed: Passing 'identifier' as expected by ResetPasswordConfirmScreen
-          otpCode={resetOtpCode}
-          onBack={() => setCurrentScreen('resetOtp')}
-          onSuccess={() => setCurrentScreen('Login')}
-        />
-      )} */}
+    
      </NavigationContainer>
   );
 }
