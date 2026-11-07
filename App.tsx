@@ -11,7 +11,7 @@ import CustomerSignupScreen from './src/screens/CustomerSignupScreen';
 import RiderSignupScreen from './src/screens/RiderSignupScreen';
 import Login from './src/screens/Login';
 import CustomerHomeScreen from './src/screens/CustomerHomeScreen';
-import RiderHomeScreen from './src/screens/RiderHomeScreen';
+import RiderScreen1 from './src/screens/RiderScreen1';
 
 import RiderInfo_1 from './src/RiderUnboading/RiderInfo_1';
 import RiderInfo_2 from './src/RiderUnboading/RiderInfo_2';
@@ -28,6 +28,7 @@ import NinVerification from './src/RiderUnboading/NinVerification';
 import { updateRiderProfile } from './src/api/client';
 import CustomerTabs from './src/CustormerScreen/Navigation/CustomerTabs';
 import { NavigationContainer } from '@react-navigation/native';
+import RiderHomeScreen from './src/RiderScreen/RiderHomeScreen';
 
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -47,7 +48,7 @@ export default function App() {
     | 'riderSignup'
     | 'Login'
     | 'customerHome'
-    | 'riderHome'
+    | 'RiderScreen1'
     | 'forgotPassword'
     | 'resetOtp'
     | 'resetConfirm'
@@ -64,6 +65,7 @@ export default function App() {
     | 'NinVerification'
     | 'Approved'
     | 'CustomerTabs'
+    | 'RiderHomeScreen'
   >('welcome');
 
   
@@ -112,8 +114,9 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
       {/* WELCOME */}
       {currentScreen === 'welcome' && (
         <WelcomeScreen
-          //onGetStarted={() => setCurrentScreen('customerHome')}
-           onGetStarted={() => setCurrentScreen('login')}
+          onGetStarted={() => setCurrentScreen('customerHome')}
+          //onGetStarted={() => setCurrentScreen('Approved')}
+          // onGetStarted={() => setCurrentScreen('login')}
         />
       )}
 
@@ -185,7 +188,7 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
           onForgotPassword={() => setCurrentScreen('forgotPassword')}
           onLogin={(role) => {
             if (role === 'RIDER') {
-              setCurrentScreen('riderHome');
+              setCurrentScreen('RiderScreen1');
             } else {
               setCurrentScreen('customerHome');
             }
@@ -241,8 +244,8 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
 {currentScreen === "customerHome" && <CustomerTabs />}
 
       {/* RIDER HOME */}
-      {currentScreen === 'riderHome' && (
-        <RiderHomeScreen
+      {currentScreen === 'RiderScreen1' && (
+        <RiderScreen1
            onRiderinfo_1={() => setCurrentScreen('onRiderInfo_1')}
         />
       )}
@@ -269,7 +272,7 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
         lastName={riderData.lastName}
         phoneNumber={phoneNumber} // Pass the verified phone from state
         email={riderData.email}
-        onBack={() => setCurrentScreen('riderHome')}
+        onBack={() => setCurrentScreen('RiderScreen1')}
         onNext={(data) => {
           updateRiderData(data); // Save local screen data to central state
           setCurrentScreen('NinVerification');
@@ -370,10 +373,22 @@ const updateRiderData = (fields: Partial<typeof riderData>) => {
 
       {currentScreen === 'Approved' && (
         <Approved 
-          onNext={() => setCurrentScreen('riderHome')} // Fixed: Moves directly to the Rider Dashboard when approved
+          onNext={() => setCurrentScreen('RiderHomeScreen')} // Fixed: Moves directly to the Rider Dashboard when approved
         />
       )}
-    
+      {currentScreen === 'RiderHomeScreen' && (
+        <RiderHomeScreen
+          //onNext={() => setCurrentScreen('RiderHomeScreen')} // Fixed: Moves directly to the Rider Dashboard when approved
+        />
+      )}
+      {/* {currentScreen === 'resetConfirm' && (
+        <ResetPasswordConfirmScreen
+          identifier={resetPhoneNumber || resetEmail} // Fixed: Passing 'identifier' as expected by ResetPasswordConfirmScreen
+          otpCode={resetOtpCode}
+          onBack={() => setCurrentScreen('resetOtp')}
+          onSuccess={() => setCurrentScreen('Login')}
+        />
+      )} */}
      </NavigationContainer>
   );
 }

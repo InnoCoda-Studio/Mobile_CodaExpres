@@ -14,13 +14,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Import Screens
 import CustomerHomeScreen from "../../screens/CustomerHomeScreen";
 import PackageDelivery from "../PackageDelivery";
-// import MarketSearchScreen from "../MarketSearchScreen";
+import MarketSearchScreen from "../MarketSearchScreen";
 import BuyForMeFlowScreen from "../BuyForMeFlowScreen";
 import FindingRiderScreen from "../FindingRiderScreen";
 import OrdersScreen from "../OrdersScreen";
-import BuyForMeTrackingScreen from "../BuyForMeTrackingScreen";
+// import BuyForMeTrackingScreen from "../BuyForMeTrackingScreen";
 import DeliveryTrackingScreen from "../DeliveryTrackingScreen";
-import WalletScreen from "../WalletScreen";
+// import WalletScreen from "../WalletScreen";
 import ProfileScreen from "../ProfileScreen";
 
 // Root stack parameter types
@@ -41,9 +41,9 @@ export type CustomerStackParamList = {
     serviceType: "delivery" | "shopping";
   };
 
-  BuyForMeTracking: {
-    orderId: string;
-  };
+  // BuyForMeTracking: {
+  //   orderId: string;
+  // };
 
   DeliveryTracking: {
     orderId: string;
@@ -62,42 +62,6 @@ export type CustomerTabParamList = {
 const Tab = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
-// Temporary Orders Screen
-// function OrdersScreen() {
-//   return (
-//     <View className="flex-1 bg-[#090D16] justify-center items-center">
-//       <Text className="text-white font-bold text-lg">
-//         My Orders
-//       </Text>
-
-//       <Text className="text-slate-400 mt-2">
-//         Your active and past orders will appear here.
-//       </Text>
-//     </View>
-//   );
-// }
-
-// Temporary Wallet Screen
-// function WalletScreen() {
-//   return (
-//     <View className="flex-1 bg-[#090D16] justify-center items-center">
-//       <Text className="text-white font-bold text-lg">
-//         Wallet
-//       </Text>
-//     </View>
-//   );
-// }
-
-// Temporary Profile Screen
-// function ProfileScreen() {
-//   return (
-//     <View className="flex-1 bg-[#090D16] justify-center items-center">
-//       <Text className="text-white font-bold text-lg">
-//         Customer Profile
-//       </Text>
-//     </View>
-//   );
-// }
 
 // Bottom Tab Navigator
 function CustomerTabNavigator() {
@@ -131,7 +95,7 @@ function CustomerTabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={CustomerHomeScreen}
+        component={PackageDelivery}
         options={{
           tabBarIcon: ({ color }) => (
             <Ionicons
@@ -157,7 +121,7 @@ function CustomerTabNavigator() {
         }}
       />
 
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Wallet"
         component={WalletScreen}
         options={{
@@ -169,7 +133,7 @@ function CustomerTabNavigator() {
             />
           ),
         }}
-      />
+      /> */}
 
       <Tab.Screen
         name="Profile"
@@ -211,25 +175,25 @@ export default function CustomerTabs() {
 
       
 
-      <Stack.Screen
+      {/* <Stack.Screen
         name="BuyForMe"
         component={BuyForMeFlowScreen}
-      />
+      /> */}
 
       <Stack.Screen
         name="FindingRider"
         component={FindingRiderScreen}
       />
 
-      <Stack.Screen
+      {/* <Stack.Screen
         name="BuyForMeTracking"
         component={BuyForMeTrackingScreen}
-      />
+      /> */}
 
-      {/* <Stack.Screen
-      name="DeliveryTracking"
+      <Stack.Screen
+     name="DeliveryTracking"
       component={DeliveryTrackingScreen}
-    /> */}
+    />
           
     </Stack.Navigator>
   );
