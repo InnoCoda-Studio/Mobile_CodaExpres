@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Switch,
   Modal,
   Alert,
+  Animated,
+  Easing,
 } from "react-native";
 import Mapbox from "@rnmapbox/maps";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,14 +39,54 @@ export default function RiderHomeScreen({
   // Urgent Acceptance Counter (15 seconds)
   const [timeLeft, setTimeLeft] = useState(15);
 
+  // RADAR PULSE ANIMATION VALUES
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const dotPulse = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (isOnline) {
+      // Loop radar pulse ring
+      const radarLoop = Animated.loop(
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2500,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      );
+      
+      // Pulse status dot
+      const dotLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(dotPulse, {
+            toValue: 0.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dotPulse, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      radarLoop.start();
+      dotLoop.start();
+
       const timer = setTimeout(() => {
         triggerSimulatedOrder();
       }, 6000);
-      return () => clearTimeout(timer);
+
+      return () => {
+        clearTimeout(timer);
+        radarLoop.stop();
+        dotLoop.stop();
+      };
     } else {
       setIncomingOrder(null);
+      pulseAnim.setValue(0);
+      dotPulse.setValue(1);
     }
   }, [isOnline]);
 
@@ -82,11 +124,7 @@ export default function RiderHomeScreen({
   const handleAcceptOrder = () => {
     if (!incomingOrder) return;
     const acceptedOrder = { ...incomingOrder };
-    
-    // Clear the modal
     setIncomingOrder(null);
-    
-    // Trigger transition to ActiveOrderTrackerScreen
     onSimulateIncomingOrder(acceptedOrder);
   };
 
@@ -96,7 +134,7 @@ export default function RiderHomeScreen({
 
   return (
     <View className="flex-1 bg-[#06090F]">
-      {/* MAPBOX MAP */}
+      {/* MAPBOX MAP & SEARCHING RADAR OVERLAY */}
       <View className="absolute inset-0 bg-[#0B101D]">
         {token ? (
           <Mapbox.MapView
@@ -116,6 +154,37 @@ export default function RiderHomeScreen({
         ) : (
           <View className="flex-1 items-center justify-center">
             <Text className="text-slate-500 text-xs">Mapbox Token Missing</Text>
+          </View>
+        )}
+
+        {/* RADAR PULSE OVERLAY ON MAP */}
+        {isOnline && !incomingOrder && (
+          <View className="absolute inset-0 items-center justify-center pointer-events-none">
+            {/* Outer Expanding Radar Ring */}
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    scale: pulseAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.6, 2.5],
+                    }),
+                  },
+                ],
+                opacity: pulseAnim.interpolate({
+                  inputRange: [0, 0.7, 1],
+                  outputRange: [0.6, 0.3, 0],
+                }),
+              }}
+              className="w-48 h-48 rounded-full border-2 border-[#10B981] bg-[#10B981]/10"
+            />
+
+            {/* Inner Rider Marker Location */}
+            <View className="w-12 h-12 rounded-full bg-[#10B981]/20 border border-[#10B981] items-center justify-center shadow-2xl absolute">
+              <View className="w-6 h-6 rounded-full bg-[#E11D48] items-center justify-center border-2 border-white shadow-lg">
+                <Ionicons name="bicycle" size={12} color="#FFFFFF" />
+              </View>
+            </View>
           </View>
         )}
       </View>
@@ -167,12 +236,20 @@ export default function RiderHomeScreen({
           </View>
         </View>
 
+        {/* ONLINE SEARCHING STATUS BADGE */}
         <View className="flex-row items-center justify-between bg-[#111B2A] border border-slate-800 px-3.5 py-2.5 rounded-2xl">
           <View className="flex-row items-center gap-2.5">
-            <View className={`w-3 h-3 rounded-full ${isOnline ? "bg-emerald-500" : "bg-slate-600"}`} />
+            <Animated.View
+              style={{ opacity: isOnline ? dotPulse : 1 }}
+              className={`w-3 h-3 rounded-full ${isOnline ? "bg-emerald-500" : "bg-slate-600"}`}
+            />
             <View>
-              <Text className="text-white text-xs font-black">{isOnline ? "YOU ARE ONLINE" : "YOU ARE OFFLINE"}</Text>
-              <Text className="text-slate-400 text-[9px]">{isOnline ? "Searching for package runs..." : "Go online to start receiving orders"}</Text>
+              <Text className="text-white text-xs font-black">
+                {isOnline ? "SEARCHING FOR ORDERS..." : "YOU ARE OFFLINE"}
+              </Text>
+              <Text className="text-slate-400 text-[9px]">
+                {isOnline ? "Radar active • Stay in demand areas" : "Go online to start receiving package requests"}
+              </Text>
             </View>
           </View>
 
@@ -187,7 +264,7 @@ export default function RiderHomeScreen({
 
       {/* TEST TRIGGER BUTTON */}
       {isOnline && !incomingOrder && (
-        <View className="absolute top-44 left-4 right-4 z-10 items-center">
+        <View className="absolute top-48 left-4 right-4 z-10 items-center">
           <TouchableOpacity
             onPress={triggerSimulatedOrder}
             className="bg-[#090D16]/90 border border-[#E11D48]/40 px-4 py-2.5 rounded-full flex-row items-center gap-2 shadow-xl backdrop-blur-md"

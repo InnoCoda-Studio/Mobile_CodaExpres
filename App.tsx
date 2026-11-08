@@ -27,7 +27,7 @@ import ApplicationSubmitted from './src/RiderUnboading/ApplicationSubmitted';
 import NinVerification from './src/RiderUnboading/NinVerification';
 import { updateRiderProfile } from './src/api/client';
 import CustomerTabs from './src/CustormerScreen/Navigation/CustomerTabs';
-import RiderHomeScreen from './src/RiderScreen/RiderHomeScreen';
+import RiderStack from "./src/RiderScreen/Navigation/RiderStack";
 
 // Forgot Password Flow Screens
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
@@ -60,7 +60,7 @@ export default function App() {
     | 'ApplicationSubmitted'
     | 'NinVerification'
     | 'CustomerTabs'
-    | 'RiderHomeScreen'
+    | 'RiderStack'
   >('welcome');
 
   // Central state for all rider onboarding data
@@ -107,7 +107,6 @@ export default function App() {
         {/* WELCOME */}
         {currentScreen === 'welcome' && (
           <WelcomeScreen
-            //onGetStarted={() => setCurrentScreen('customerHome')}
             onGetStarted={() => setCurrentScreen('Approved')}
           />
         )}
@@ -337,13 +336,15 @@ export default function App() {
 
         {currentScreen === 'Approved' && (
           <Approved 
-            onNext={() => setCurrentScreen('RiderHomeScreen')}
+            onNext={() => setCurrentScreen('RiderStack')}
           />
         )}
 
-        {currentScreen === 'RiderHomeScreen' && (
-          <RiderHomeScreen />
+        {/* RIDER MAIN STACK (TABS + ACTIVE ORDER MODAL) */}
+        {currentScreen === 'RiderStack' && (
+          <RiderStack />
         )}
+
       </NavigationContainer>
     </SafeAreaProvider>
   );

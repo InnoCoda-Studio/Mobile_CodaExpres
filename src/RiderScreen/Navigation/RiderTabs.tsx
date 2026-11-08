@@ -1,6 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import RiderHomeScreen from "../RiderHomeScreen";
 import RiderOrdersScreen from "../RiderOrdersScreen";
@@ -17,6 +18,8 @@ export type RiderTabParamList = {
 const Tab = createBottomTabNavigator<RiderTabParamList>();
 
 export default function RiderTabs({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -26,8 +29,9 @@ export default function RiderTabs({ navigation }: any) {
         tabBarStyle: {
           backgroundColor: "#090D16",
           borderTopColor: "#1E293B",
-          height: 60,
-          paddingBottom: 8,
+          // Dynamically add safe area bottom inset so it never hides behind the phone bar
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 8),
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
@@ -55,7 +59,6 @@ export default function RiderTabs({ navigation }: any) {
               if (tab === "wallet") navigation.navigate("RiderWallet");
             }}
             onSimulateIncomingOrder={(orderPayload) => {
-              // Navigates directly to the full-screen ActiveOrderTracker screen!
               navigation.navigate("ActiveOrderTracker", { order: orderPayload });
             }}
           />
