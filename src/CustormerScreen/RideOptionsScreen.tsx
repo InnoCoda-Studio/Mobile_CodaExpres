@@ -228,9 +228,12 @@ export default function RideOptionsScreen({
   }, [hasValidCoordinates, pickupCoords, dropoffCoords]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#06090F", paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View style={{ flex: 1, backgroundColor: "#06090F", paddingBottom: insets.bottom }}>
       {/* TOP ROUTE SUMMARY BAR */}
-      <View className="px-5 py-3 flex-row items-center justify-between border-b border-slate-800/80 bg-[#06090F] z-10">
+      <View 
+        style={{ paddingTop: Math.max(insets.top, 12) }} 
+        className="px-5 pb-3 flex-row items-center justify-between border-b border-slate-800/80 bg-[#06090F] z-10"
+      >
         <TouchableOpacity
           onPress={onBack}
           className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700/80 items-center justify-center shadow-md"
@@ -397,7 +400,7 @@ export default function RideOptionsScreen({
                       )}
                     </View>
                     <Text className="text-slate-400 text-xs font-medium mt-0.5">
-                      {option.eta} • {option.category}
+                      {option.category}
                     </Text>
                   </View>
                 </View>

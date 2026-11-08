@@ -47,69 +47,145 @@ const PackageDelivery = () => {
   ]);
 
   // GPS EFFECT
+  // useEffect(() => {
+  //   async function getGPS() {
+  //     let { status } = await Location.requestForegroundPermissionsAsync();
+  //     if (status !== 'granted') {
+  //       setStatusText("Permission denied!");
+  //       return;
+  //     }
+
+  //     let location = await Location.getCurrentPositionAsync({});
+  //     const { longitude, latitude } = location.coords;
+
+  //     setUserCoords([longitude, latitude]);
+  //     setStatusText(`Found you! CodaExpress active.`);
+
+  //     Animated.spring(bounceAnim, {
+  //       toValue: 1,
+  //       friction: 4,
+  //       tension: 50,
+  //       useNativeDriver: true,
+  //     }).start();
+
+  //     try {
+  //       const addresses = await Location.reverseGeocodeAsync({
+  //         latitude,
+  //         longitude,
+  //       });
+
+  //       const address = addresses[0];
+
+  //       if (address) {
+  //         const street = [
+  //           address.streetNumber,
+  //           address.street,
+  //         ]
+  //           .filter(Boolean)
+  //           .join(" ");
+
+  //         const name =
+  //           street ||
+  //           address.name ||
+  //           address.district ||
+  //           "Current location";
+
+  //         setCurrentPickup({
+  //           id: "gps-pickup",
+  //           name,
+  //           address: [
+  //             address.city,
+  //             address.region,
+  //             address.country,
+  //           ]
+  //             .filter(Boolean)
+  //             .join(", "),
+  //           coordinates: [longitude, latitude],
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.log("Reverse geocoding failed:", error);
+  //     }
+  //   }
+
+  //   getGPS();
+  // }, []);
+
   useEffect(() => {
-    async function getGPS() {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+  let isMounted = true;
+
+  async function initInstantGPS() {
+    try {
+      // 1. Instant check for permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setStatusText("Permission denied!");
+        if (isMounted) setStatusText("GPS Permission denied");
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      const { longitude, latitude } = location.coords;
+      // 2. Load cached/last-known position INSTANTLY (0ms delay)
+      const lastKnown = await Location.getLastKnownPositionAsync({});
+      if (lastKnown && isMounted) {
+        const { longitude, latitude } = lastKnown.coords;
+        setUserCoords([longitude, latitude]);
+        setStatusText("CodaExpress Active");
+        
+        // Trigger instant pin animation
+        Animated.spring(bounceAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 50,
+          useNativeDriver: true,
+        }).start();
 
-      setUserCoords([longitude, latitude]);
-      setStatusText(`Found you! CodaExpress active.`);
-
-      Animated.spring(bounceAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 50,
-        useNativeDriver: true,
-      }).start();
-
-      try {
-        const addresses = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
+        // Set quick initial pickup state immediately
+        setCurrentPickup({
+          id: "gps-pickup",
+          name: "Current Location",
+          address: "Fetching address...",
+          coordinates: [longitude, latitude],
         });
+      }
 
-        const address = addresses[0];
+      // 3. Fetch fresh high-accuracy position in background
+      const freshLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      
+      const { longitude, latitude } = freshLocation.coords;
+      if (isMounted) {
+        setUserCoords([longitude, latitude]);
+      }
 
-        if (address) {
-          const street = [
-            address.streetNumber,
-            address.street,
-          ]
-            .filter(Boolean)
-            .join(" ");
-
-          const name =
-            street ||
-            address.name ||
-            address.district ||
-            "Current location";
+      // 4. Reverse geocode asynchronously without blocking UI rendering
+      Location.reverseGeocodeAsync({ latitude, longitude })
+        .then((addresses) => {
+          if (!isMounted || !addresses.length) return;
+          const address = addresses[0];
+          const street = [address.streetNumber, address.street].filter(Boolean).join(" ");
+          const name = street || address.name || address.district || "Current location";
 
           setCurrentPickup({
             id: "gps-pickup",
             name,
-            address: [
-              address.city,
-              address.region,
-              address.country,
-            ]
-              .filter(Boolean)
-              .join(", "),
+            address: [address.city, address.region, address.country].filter(Boolean).join(", "),
             coordinates: [longitude, latitude],
           });
-        }
-      } catch (error) {
-        console.log("Reverse geocoding failed:", error);
-      }
-    }
+        })
+        .catch((err) => console.log("Background reverse geocode error:", err));
 
-    getGPS();
-  }, []);
+    } catch (error) {
+      console.log("GPS Init Error:", error);
+      if (isMounted) setStatusText("Using default location");
+    }
+  }
+
+  initInstantGPS();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   // 1. FULL-SCREEN ROUTE SEARCH MODAL
   if (showRouteSearch) {
@@ -169,8 +245,7 @@ const PackageDelivery = () => {
       </GestureHandlerRootView>
     );
   }
-
-  // 4. DELIVERY REVIEW SCREEN
+// 4. DELIVERY REVIEW SCREEN (Transitions to FindingRider)
   if (showReview && selectedRoute && selectedVehicle) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -185,28 +260,23 @@ const PackageDelivery = () => {
             setShowReview(false);
             setShowRouteSearch(true);
           }}
-          onConfirm={() => {
-            setTrackingData({
-              orderId: "CE-89241",
-              status: "picked_up",
-              riderName: "Daniel K.",
-              riderPhone: "+2348123456789",
-              riderRating: "4.8",
-              riderTrips: 124,
-              deliveryPin: "8492",
-              etaMins: 18,
-              distanceKm: 2.4,
-              riderCoordinates: [3.3820, 6.5260],
-            });
-
+          onConfirm={async () => {
+            // 1. Hide the review screen modal/state
             setShowReview(false);
-            setShowTracking(true);
+
+            // 2. Navigate straight to FindingRiderScreen passing the order details
+            navigation.navigate("FindingRider", {
+              orderId: "CDX-" + Date.now().toString().slice(-6),
+              serviceType: "delivery",
+              pickup: selectedRoute.pickup.name,
+              dropoff: selectedRoute.dropoff.name,
+              price: selectedVehicle.price,
+            });
           }}
         />
       </GestureHandlerRootView>
     );
   }
-
   // 5. MAIN MAP VIEW & BOTTOM SHEET
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

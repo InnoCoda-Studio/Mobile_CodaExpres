@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   View,
@@ -12,23 +11,20 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { CustomerStackParamList } from "./Navigation/CustomerTabs";
 
-type OrderType = "delivery" | "shopping";
 type OrderStatus = "active" | "completed" | "cancelled";
 
 interface CustomerOrder {
   id: string;
-  type: OrderType;
   status: OrderStatus;
   stage: string;
   pickup: string;
   destination: string;
-  amount: number | null;
+  amount: number;
 }
 
 const demoOrders: CustomerOrder[] = [
   {
     id: "DEMO-CDX-001",
-    type: "delivery",
     status: "active",
     stage: "Rider in transit",
     pickup: "Lekki Phase 1",
@@ -36,17 +32,7 @@ const demoOrders: CustomerOrder[] = [
     amount: 2500,
   },
   {
-    id: "DEMO-CDX-002",
-    type: "shopping",
-    status: "active",
-    stage: "Shopping in progress",
-    pickup: "Mile 12 Market",
-    destination: "Ajah",
-    amount: null,
-  },
-  {
     id: "DEMO-CDX-003",
-    type: "delivery",
     status: "completed",
     stage: "Delivered",
     pickup: "Chevron",
@@ -72,29 +58,14 @@ export default function OrdersScreen() {
 
   const handleTrackOrder = (order: CustomerOrder) => {
     if (order.status !== "active") return;
-
-    // Temporary navigation until tracking screens
-    // are registered in CustomerTabs.
-    if (order.type === "shopping") {
-      navigation.navigate("FindingRider", {
-        orderId: order.id,
-      });
-    } else {
-      navigation.navigate("PackageDelivery");
-    }
+    navigation.navigate("PackageDelivery");
   };
 
-  const handleBookAgain = (order: CustomerOrder) => {
-    navigation.navigate(
-      order.type === "shopping"
-        ? "BuyForMe"
-        : "PackageDelivery"
-    );
+  const handleBookAgain = (_order: CustomerOrder) => {
+    navigation.navigate("PackageDelivery");
   };
 
   const renderOrder = (order: CustomerOrder) => {
-    const isShopping = order.type === "shopping";
-
     return (
       <View
         key={order.id}
@@ -103,25 +74,17 @@ export default function OrdersScreen() {
         {/* Order header */}
         <View className="flex-row items-center justify-between mb-5">
           <View className="flex-row items-center flex-1">
-            <View
-              className={`w-12 h-12 rounded-2xl items-center justify-center ${
-                isShopping
-                  ? "bg-[#E11D4820]"
-                  : "bg-[#0284C720]"
-              }`}
-            >
+            <View className="w-12 h-12 rounded-2xl bg-[#0284C720] items-center justify-center">
               <Ionicons
-                name={isShopping ? "basket" : "cube"}
+                name="cube"
                 size={23}
-                color={isShopping ? "#FB7185" : "#38BDF8"}
+                color="#38BDF8"
               />
             </View>
 
             <View className="ml-3 flex-1">
               <Text className="text-white text-[15px] font-extrabold">
-                {isShopping
-                  ? "Buy For Me"
-                  : "Package Delivery"}
+                Package Delivery
               </Text>
 
               <Text className="text-[#94A3B8] text-xs mt-1">
@@ -145,7 +108,7 @@ export default function OrdersScreen() {
           </View>
         </View>
 
-        {/* Pickup / Market */}
+        {/* Pickup */}
         <View className="flex-row items-center">
           <Ionicons
             name="radio-button-on"
@@ -155,7 +118,7 @@ export default function OrdersScreen() {
 
           <View className="ml-3 flex-1">
             <Text className="text-[#64748B] text-xs">
-              {isShopping ? "Market" : "Pickup"}
+              Pickup
             </Text>
             <Text className="text-white text-sm font-semibold mt-1">
               {order.pickup}
@@ -196,14 +159,10 @@ export default function OrdersScreen() {
 
           <View className="items-end">
             <Text className="text-[#94A3B8] text-xs mb-1">
-              {isShopping
-                ? "Estimated total"
-                : "Delivery fee"}
+              Delivery fee
             </Text>
             <Text className="text-white text-base font-extrabold">
-              {order.amount === null
-                ? "Pending"
-                : `₦${order.amount.toLocaleString("en-NG")}`}
+              {`₦${order.amount.toLocaleString("en-NG")}`}
             </Text>
           </View>
         </View>
@@ -234,9 +193,7 @@ export default function OrdersScreen() {
 
           <Text className="text-white font-bold text-sm mx-3">
             {order.status === "active"
-              ? isShopping
-                ? "View Shopping Order"
-                : "View Delivery"
+              ? "View Delivery"
               : "Book Again"}
           </Text>
 
@@ -270,7 +227,7 @@ export default function OrdersScreen() {
             </Text>
 
             <Text className="text-[#94A3B8] text-xs mt-1">
-              Manage your deliveries and shopping
+              Manage your package deliveries
             </Text>
           </View>
 
@@ -365,51 +322,30 @@ export default function OrdersScreen() {
           Book Another Service
         </Text>
 
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() =>
-              navigation.navigate("PackageDelivery")
-            }
-            className="flex-1 bg-[#1E293B] border border-[#334155] rounded-2xl p-4"
-          >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() =>
+            navigation.navigate("PackageDelivery")
+          }
+          className="bg-[#1E293B] border border-[#334155] rounded-2xl p-4 flex-row items-center"
+        >
+          <View className="w-12 h-12 rounded-2xl bg-[#0284C720] items-center justify-center">
             <Ionicons
               name="cube-outline"
-              size={28}
+              size={26}
               color="#38BDF8"
             />
-
-            <Text className="text-white font-extrabold text-sm mt-4">
+          </View>
+          <View className="ml-4 flex-1">
+            <Text className="text-white font-extrabold text-base">
               Package Delivery
             </Text>
-
-            <Text className="text-[#94A3B8] text-xs mt-2">
-              Send a package
+            <Text className="text-[#94A3B8] text-xs mt-1">
+              Send documents, parcels, or goods across town
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() =>
-              navigation.navigate("BuyForMe")
-            }
-            className="flex-1 bg-[#1E293B] border border-[#334155] rounded-2xl p-4"
-          >
-            <Ionicons
-              name="basket-outline"
-              size={28}
-              color="#FB7185"
-            />
-
-            <Text className="text-white font-extrabold text-sm mt-4">
-              Buy For Me
-            </Text>
-
-            <Text className="text-[#94A3B8] text-xs mt-2">
-              Shop at a market
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#64748B" />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

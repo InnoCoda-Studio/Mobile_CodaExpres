@@ -38,16 +38,15 @@ export type CustomerStackParamList = {
 
   FindingRider: {
     orderId: string;
-    serviceType: "delivery" | "shopping";
+    serviceType?: "delivery" | "shopping";
+    pickup?: string;
+    dropoff?: string;
+    price?: string;
   };
-
-  // BuyForMeTracking: {
-  //   orderId: string;
-  // };
 
   DeliveryTracking: {
     orderId: string;
-    serviceType: "delivery" | "shopping";
+    serviceType?: "delivery" | "shopping";
   };
 };
 
@@ -191,7 +190,7 @@ export default function CustomerTabs() {
       /> */}
 
       <Stack.Screen
-     name="DeliveryTracking"
+      name="DeliveryTracking"
       component={DeliveryTrackingScreen}
     />
           

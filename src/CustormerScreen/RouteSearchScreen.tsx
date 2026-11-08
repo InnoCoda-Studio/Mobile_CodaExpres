@@ -105,6 +105,11 @@ export default function RouteSearchScreen({
   const [dropoffPlace, setDropoffPlace] = useState<Place | null>(null);
 
   const [activeField, setActiveField] = useState<Field>("dropoff");
+  
+  // Track typing state separately for each field to prevent auto-searching prefilled text
+  const [pickupTyped, setPickupTyped] = useState(false);
+  const [dropoffTyped, setDropoffTyped] = useState(false);
+
   const [places, setPlaces] = useState<Place[]>(DEFAULT_PLACES);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -137,11 +142,13 @@ export default function RouteSearchScreen({
   }, [initialPickup]);
 
   const activeQuery = activeField === "pickup" ? pickupText : dropoffText;
+  const isCurrentlyTyped = activeField === "pickup" ? pickupTyped : dropoffTyped;
 
   useEffect(() => {
     const query = activeQuery.trim();
 
-    if (query.length < 2) {
+    // Only search if user has actively typed a query of length >= 2
+    if (!isCurrentlyTyped || query.length < 2) {
       setPlaces(DEFAULT_PLACES);
       setIsLoading(false);
       return;
@@ -177,38 +184,45 @@ export default function RouteSearchScreen({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [activeQuery]);
+  }, [activeQuery, isCurrentlyTyped]);
 
   const selectPlace = (place: Place) => {
     if (activeField === "pickup") {
       setPickupText(place.name);
       setPickupPlace(place);
+      setPickupTyped(false);
       setActiveField("dropoff");
     } else {
       setDropoffText(place.name);
       setDropoffPlace(place);
+      setDropoffTyped(false);
     }
+    setPlaces(DEFAULT_PLACES);
     Keyboard.dismiss();
   };
 
-const swapLocations = () => {
-  Keyboard.dismiss();
+  const swapLocations = () => {
+    Keyboard.dismiss();
 
-  const oldPickupText = pickupText;
-  const oldDropoffText = dropoffText;
-  const oldPickupPlace = pickupPlace;
-  const oldDropoffPlace = dropoffPlace;
+    const oldPickupText = pickupText;
+    const oldDropoffText = dropoffText;
+    const oldPickupPlace = pickupPlace;
+    const oldDropoffPlace = dropoffPlace;
+    const oldPickupTyped = pickupTyped;
+    const oldDropoffTyped = dropoffTyped;
 
-  setPickupText(oldDropoffText);
-  setDropoffText(oldPickupText);
+    setPickupText(oldDropoffText);
+    setDropoffText(oldPickupText);
 
-  setPickupPlace(oldDropoffPlace);
-  setDropoffPlace(oldPickupPlace);
+    setPickupPlace(oldDropoffPlace);
+    setDropoffPlace(oldPickupPlace);
 
-  setActiveField("pickup");
-};
+    setPickupTyped(oldDropoffTyped);
+    setDropoffTyped(oldPickupTyped);
 
-  // 🟢 ALLOW CONTINUING AS LONG AS BOTH TEXT INPUTS HAVE TEXT
+    setActiveField("pickup");
+  };
+
   const canContinue = pickupText.trim().length > 0 && dropoffText.trim().length > 0;
 
   const handleConfirmLocations = () => {
@@ -249,9 +263,11 @@ const swapLocations = () => {
           if (mapPickerMode === "pickup") {
             setPickupPlace(place);
             setPickupText(place.name);
+            setPickupTyped(false);
           } else {
             setDropoffPlace(place);
             setDropoffText(place.name);
+            setDropoffTyped(false);
           }
           setMapPickerMode(null);
         }}
@@ -286,7 +302,7 @@ const swapLocations = () => {
         </View>
       </View>
 
-      {/* LUXURY ROUTE INPUT CONTAINER */}
+      {/* ROUTE INPUT CONTAINER */}
       <View className="mx-5 mt-5 bg-[#0A0F1D] border border-slate-800/80 rounded-3xl p-4 shadow-2xl relative">
         <View className="absolute left-[31px] top-[48px] bottom-[48px] w-0.5 bg-slate-800 z-0" />
 
@@ -296,42 +312,39 @@ const swapLocations = () => {
             <Ionicons name="radio-button-on" size={16} color="#10B981" />
           </View>
               
-        <View className="flex-1 ml-3.5">
-          <Text className="text-emerald-400 text-[9px] font-black tracking-widest uppercase">
-            Pickup Location
-          </Text>
+          <View className="flex-1 ml-3.5">
+            <Text className="text-emerald-400 text-[9px] font-black tracking-widest uppercase">
+              Pickup Location
+            </Text>
 
-          <TextInput
-            value={pickupText}
-            onFocus={() => {
-              console.log("Pickup input focused");
-            }}
-            onChangeText={(text) => {
-              setPickupText(text);
-              setPickupPlace(null);
-            }}
-            placeholder="Where should we pick up?"
-            placeholderTextColor="#64748B"
-            className="text-white text-sm font-bold py-0.5"
-            autoCorrect={false}
-          />
-        </View>
+            <TextInput
+              value={pickupText}
+              onFocus={() => setActiveField("pickup")}
+              onChangeText={(text) => {
+                setPickupText(text);
+                setPickupPlace(null);
+                setPickupTyped(true);
+                setActiveField("pickup");
+              }}
+              placeholder="Where should we pick up?"
+              placeholderTextColor="#64748B"
+              className="text-white text-sm font-bold py-0.5"
+              autoCorrect={false}
+            />
+          </View>
 
-
-        {pickupText.trim().length > 0 && (
+          {pickupText.trim().length > 0 && (
             <TouchableOpacity
               onPress={() => {
                 setPickupText("");
                 setPickupPlace(null);
+                setPickupTyped(true);
+                setActiveField("pickup");
               }}
               activeOpacity={0.7}
               className="p-2 items-center justify-center"
             >
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color="#64748B"
-              />
+              <Ionicons name="close-circle" size={20} color="#64748B" />
             </TouchableOpacity>
           )}
 
@@ -347,17 +360,12 @@ const swapLocations = () => {
         {/* SWAP BUTTON DIVIDER */}
         <View className="flex-row items-center my-1.5 z-10">
           <View className="flex-1 h-[1px] bg-slate-800/60 ml-11" />
-         {/* SWAP BUTTON */}
           <TouchableOpacity
             onPress={swapLocations}
             activeOpacity={0.8}
             className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 items-center justify-center mx-3 shadow-md"
           >
-            <Ionicons
-              name="swap-vertical"
-              size={16}
-              color="#E11D48"
-            />
+            <Ionicons name="swap-vertical" size={16} color="#E11D48" />
           </TouchableOpacity>
         </View>
 
@@ -374,6 +382,7 @@ const swapLocations = () => {
               onChangeText={(val) => {
                 setDropoffText(val);
                 setDropoffPlace(null);
+                setDropoffTyped(true);
                 setActiveField("dropoff");
               }}
               placeholder="Where are we delivering?"
@@ -383,7 +392,7 @@ const swapLocations = () => {
           </View>
 
           {dropoffText.length > 0 && (
-            <TouchableOpacity onPress={() => { setDropoffText(""); setDropoffPlace(null); setActiveField("dropoff"); }} className="p-1">
+            <TouchableOpacity onPress={() => { setDropoffText(""); setDropoffPlace(null); setDropoffTyped(true); setActiveField("dropoff"); }} className="p-1">
               <Ionicons name="close-circle" size={18} color="#64748B" />
             </TouchableOpacity>
           )}
@@ -402,7 +411,7 @@ const swapLocations = () => {
       <View className="flex-1 mt-5">
         <View className="flex-row justify-between items-center px-6 mb-2.5">
           <Text className="text-slate-400 text-[11px] font-black uppercase tracking-wider">
-            {activeQuery.trim() ? "Live Search Results" : "Suggested Places"}
+            {isCurrentlyTyped && activeQuery.trim().length >= 2 ? "Live Search Results" : "Suggested Places"}
           </Text>
           {isLoading && <ActivityIndicator size="small" color="#E11D48" />}
         </View>
@@ -439,7 +448,7 @@ const swapLocations = () => {
       </View>
 
       {/* STICKY BOTTOM CONFIRM BUTTON */}
-      <View className="px-5 pt-3 pb-2 bg-[#06090F] border-t border-slate-800/80 shadow-2xl">
+      <View className="px-5 pt-3 bg-[#06090F] border-t border-slate-800/80 shadow-2xl">
         <TouchableOpacity
           disabled={!canContinue}
           onPress={handleConfirmLocations}
