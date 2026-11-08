@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   View,
@@ -45,29 +44,29 @@ function SettingRow({
   subtitle,
   onPress,
   trailing,
-  iconColor = "#0EA5E9",
+  iconColor = "#E11D48",
 }: SettingRowProps) {
   return (
     <TouchableOpacity
       activeOpacity={0.75}
       onPress={onPress}
-      className="min-h-[76px] flex-row items-center rounded-2xl border border-[#16436A] bg-[#0C1B30] px-4 py-3"
+      className="min-h-[76px] flex-row items-center rounded-2xl border border-slate-800 bg-[#111B2A] px-4 py-3"
     >
-      <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#082B49]">
-        <Ionicons name={icon} size={29} color={iconColor} />
+      <View className="h-12 w-12 items-center justify-center rounded-xl bg-slate-900 border border-slate-800">
+        <Ionicons name={icon} size={24} color={iconColor} />
       </View>
 
       <View className="ml-4 flex-1">
-        <Text className="text-[16px] font-bold text-white">
+        <Text className="text-[15px] font-bold text-white">
           {title}
         </Text>
-        <Text className="mt-0.5 text-[13px] text-[#A8C9E9]">
+        <Text className="mt-0.5 text-xs text-slate-400">
           {subtitle}
         </Text>
       </View>
 
       {trailing || (
-        <Ionicons name="chevron-forward" size={23} color="#A8C9E9" />
+        <Ionicons name="chevron-forward" size={20} color="#64748B" />
       )}
     </TouchableOpacity>
   );
@@ -106,10 +105,10 @@ export default function ProfileScreen({
   };
 
   return (
-    <View className="flex-1 bg-[#070F1D]">
+    <View className="flex-1 bg-[#06090F]">
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#071426"
+        backgroundColor="#06090F"
       />
 
       <ScrollView
@@ -119,7 +118,7 @@ export default function ProfileScreen({
         }}
       >
         {/* Header */}
-        <View className="border-b border-[#102C49] bg-[#08172A] px-5 pb-4">
+        <View className="border-b border-slate-800 bg-[#090D16] px-5 pb-4">
           <View
             className="flex-row items-center justify-between"
             style={{ paddingTop: Math.max(insets.top, 12) + 8 }}
@@ -127,36 +126,33 @@ export default function ProfileScreen({
             <TouchableOpacity
               onPress={onBack}
               activeOpacity={0.7}
-              className="h-11 w-11 items-center justify-center"
+              className="h-11 w-11 items-center justify-center rounded-full bg-slate-900 border border-slate-800"
             >
-              <Ionicons name="arrow-back" size={29} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            
 
             <View className="flex-row items-center justify-center">
               <Image
                 source={require("../../assets/codaexpress-logo.png")}
                 resizeMode="contain"
-                className="mr-2 h-10 w-10"
+                className="mr-2 h-8 w-8"
               />
-
-              <Text className="text-[21px] font-extrabold tracking-tight text-white">
-                Coda
-                <Text className="text-brand">Express</Text>
+              <Text className="text-lg font-black tracking-tight text-white">
+                Coda<Text className="text-[#E11D48]">Express</Text>
               </Text>
             </View>
 
             <TouchableOpacity
               activeOpacity={0.7}
-              className="relative h-11 w-11 items-center justify-center"
+              className="relative h-11 w-11 items-center justify-center rounded-full bg-slate-900 border border-slate-800"
             >
               <Ionicons
                 name="notifications-outline"
-                size={27}
+                size={20}
                 color="#FFFFFF"
               />
-              <View className="absolute right-0 top-0 h-5 w-5 items-center justify-center rounded-full bg-[#E11D48]">
-                <Text className="text-[11px] font-bold text-white">3</Text>
+              <View className="absolute right-2 top-2 h-4 w-4 items-center justify-center rounded-full bg-[#E11D48]">
+                <Text className="text-[10px] font-bold text-white">3</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -165,11 +161,11 @@ export default function ProfileScreen({
         <View className="px-5 pt-5">
           {/* Page title */}
           <View className="mb-5">
-            <Text className="text-[29px] font-extrabold text-white">
+            <Text className="text-2xl font-black text-white">
               Settings
             </Text>
-            <Text className="mt-1 text-[14px] text-[#A8C9E9]">
-              Manage your account and preferences
+            <Text className="mt-1 text-xs text-slate-400">
+              Manage your delivery profile and preferences
             </Text>
           </View>
 
@@ -177,10 +173,10 @@ export default function ProfileScreen({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onEditProfile}
-            className="mb-5 flex-row items-center rounded-2xl border border-[#165080] bg-[#0C1B30] p-4"
+            className="mb-5 flex-row items-center rounded-2xl border border-slate-800 bg-[#111B2A] p-4 shadow-xl"
           >
             <View className="relative">
-              <View className="h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-full border-[3px] border-[#0EA5E9] bg-[#183B59]">
+              <View className="h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-[#E11D48] bg-slate-900">
                 {avatarUri ? (
                   <Image
                     source={{ uri: avatarUri }}
@@ -190,102 +186,98 @@ export default function ProfileScreen({
                 ) : (
                   <Ionicons
                     name="person"
-                    size={54}
-                    color="#A8C9E9"
+                    size={40}
+                    color="#94A3B8"
                   />
                 )}
               </View>
 
-              <View className="absolute bottom-0 right-[-3px] h-9 w-9 items-center justify-center rounded-full border-2 border-[#0C1B30] bg-[#071426]">
-                <Ionicons name="camera-outline" size={19} color="#FFFFFF" />
+              <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full border-2 border-[#111B2A] bg-[#E11D48]">
+                <Ionicons name="camera-outline" size={14} color="#FFFFFF" />
               </View>
             </View>
 
             <View className="ml-4 flex-1">
-              <View className="mb-2 flex-row flex-wrap items-center">
-                <Text className="mr-2 text-[19px] font-extrabold text-white">
+              <View className="mb-1.5 flex-row flex-wrap items-center">
+                <Text className="mr-2 text-base font-black text-white">
                   {fullName}
                 </Text>
 
-                <View className="flex-row items-center rounded-full bg-[#075B9C] px-2.5 py-1">
+                <View className="flex-row items-center rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5">
                   <Ionicons
                     name="checkmark-circle"
-                    size={13}
-                    color="#BAE6FD"
+                    size={12}
+                    color="#34D399"
                   />
-                  <Text className="ml-1 text-[11px] font-bold text-white">
+                  <Text className="ml-1 text-[10px] font-bold text-emerald-400">
                     Verified
                   </Text>
                 </View>
               </View>
 
               <View className="mb-1 flex-row items-center">
-                <Ionicons name="call-outline" size={16} color="#A8C9E9" />
-                <Text className="ml-2 text-[13px] text-white">
+                <Ionicons name="call-outline" size={14} color="#94A3B8" />
+                <Text className="ml-2 text-xs text-slate-300">
                   {phoneNumber}
                 </Text>
               </View>
 
               <View className="flex-row items-center">
-                <Ionicons name="mail-outline" size={17} color="#A8C9E9" />
+                <Ionicons name="mail-outline" size={14} color="#94A3B8" />
                 <Text
                   numberOfLines={1}
-                  className="ml-2 flex-1 text-[13px] text-[#A8C9E9]"
+                  className="ml-2 flex-1 text-xs text-slate-400"
                 >
                   {email}
                 </Text>
               </View>
             </View>
 
-            <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-forward" size={20} color="#64748B" />
           </TouchableOpacity>
 
           {/* Account settings */}
           <View className="mb-5">
             <SettingRow
-              icon="location"
-              title="My Addresses"
-              subtitle="Manage delivery addresses"
+              icon="location-outline"
+              title="Saved Addresses"
+              subtitle="Manage pickup and drop-off locations"
               onPress={onAddresses}
             />
 
-            <View className="h-0.5" />
+            <View className="h-2" />
 
             <SettingRow
-              icon="card"
+              icon="card-outline"
               title="Payment Methods"
-              subtitle="Cards, Wallets & More"
+              subtitle="Cards & dispatch payment settings"
               onPress={onPaymentMethods}
               trailing={
                 <View className="flex-row items-center">
-                  <View className="mr-1 rounded-md bg-[#123D86] px-2 py-1">
-                    <Text className="text-[12px] font-extrabold italic text-white">
-                      VISA
+                  <View className="mr-2 rounded-md bg-slate-900 border border-slate-800 px-2 py-1">
+                    <Text className="text-[10px] font-extrabold tracking-widest text-slate-300">
+                      CARD
                     </Text>
                   </View>
-                  <View className="mr-1 flex-row items-center rounded-md bg-[#101C2D] px-2 py-1">
-                    <View className="h-4 w-4 rounded-full bg-[#EB001B]" />
-                    <View className="-ml-1.5 h-4 w-4 rounded-full bg-[#F79E1B] opacity-90" />
-                  </View>
-                  <Ionicons name="chevron-forward" size={22} color="#A8C9E9" />
+                  <Ionicons name="chevron-forward" size={20} color="#64748B" />
                 </View>
               }
             />
 
-            <View className="h-0.5" />
+            <View className="h-2" />
 
             <SettingRow
-              icon="cash"
+              icon="cash-outline"
               title="Currency & Location"
-              subtitle="NGN  ₦ • Lagos, Nigeria"
+              subtitle="NGN ₦ • Lagos, Nigeria"
               onPress={onCurrency}
               trailing={
                 <View className="flex-row items-center">
-                  <Text className="mr-3 text-xl">🇳🇬</Text>
+                  <Text className="mr-2 text-base">🇳🇬</Text>
                   <Ionicons
                     name="chevron-forward"
-                    size={23}
-                    color="#A8C9E9"
+                    size={20}
+                    color="#64748B"
                   />
                 </View>
               }
@@ -293,30 +285,30 @@ export default function ProfileScreen({
           </View>
 
           {/* Appearance */}
-          <View className="mb-2 min-h-[76px] flex-row items-center rounded-2xl border border-[#16436A] bg-[#0C1B30] px-4 py-3">
-            <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#082B49]">
-              <Ionicons name="sunny" size={29} color="#FBBF24" />
+          <View className="mb-5 min-h-[76px] flex-row items-center rounded-2xl border border-slate-800 bg-[#111B2A] px-4 py-3">
+            <View className="h-12 w-12 items-center justify-center rounded-xl bg-slate-900 border border-slate-800">
+              <Ionicons name="sunny-outline" size={24} color="#FBBF24" />
             </View>
 
             <View className="ml-4 flex-1">
-              <Text className="text-[16px] font-bold text-white">
+              <Text className="text-[15px] font-bold text-white">
                 Appearance
               </Text>
-              <Text className="mt-0.5 text-[13px] text-[#A8C9E9]">
-                Choose your preferred theme
+              <Text className="mt-0.5 text-xs text-slate-400">
+                Choose your app theme
               </Text>
             </View>
 
-            <View className="flex-row rounded-full border border-[#16436A] bg-[#102B48] p-1">
+            <View className="flex-row rounded-full border border-slate-800 bg-slate-900 p-1">
               <TouchableOpacity
                 onPress={() => setTheme("dark")}
-                className={`rounded-full px-4 py-2 ${
-                  theme === "dark" ? "bg-[#0EA5E9]" : ""
+                className={`rounded-full px-3 py-1.5 ${
+                  theme === "dark" ? "bg-[#E11D48]" : ""
                 }`}
               >
                 <Text
-                  className={`text-[12px] font-bold ${
-                    theme === "dark" ? "text-white" : "text-[#A8C9E9]"
+                  className={`text-[11px] font-bold ${
+                    theme === "dark" ? "text-white" : "text-slate-400"
                   }`}
                 >
                   Dark
@@ -325,13 +317,13 @@ export default function ProfileScreen({
 
               <TouchableOpacity
                 onPress={() => setTheme("light")}
-                className={`rounded-full px-4 py-2 ${
-                  theme === "light" ? "bg-[#0EA5E9]" : ""
+                className={`rounded-full px-3 py-1.5 ${
+                  theme === "light" ? "bg-[#E11D48]" : ""
                 }`}
               >
                 <Text
-                  className={`text-[12px] font-bold ${
-                    theme === "light" ? "text-white" : "text-[#A8C9E9]"
+                  className={`text-[11px] font-bold ${
+                    theme === "light" ? "text-white" : "text-slate-400"
                   }`}
                 >
                   Light
@@ -341,20 +333,20 @@ export default function ProfileScreen({
           </View>
 
           {/* Preferences */}
-          <View className="mb-5 mt-2">
+          <View className="mb-5">
             <SettingRow
               icon="notifications-outline"
               title="Notifications"
-              subtitle="Manage alerts and updates"
+              subtitle="Manage tracking alerts and updates"
               onPress={onNotifications}
             />
 
             <View className="h-2" />
 
             <SettingRow
-              icon="shield-checkmark"
+              icon="shield-checkmark-outline"
               title="Privacy & Security"
-              subtitle="Control your data and security"
+              subtitle="Control your account data and security"
               onPress={onPrivacy}
             />
           </View>
@@ -363,27 +355,27 @@ export default function ProfileScreen({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onSwitchToRider}
-            className="mb-4 min-h-[84px] flex-row items-center rounded-2xl border border-[#029DEB] bg-[#0B2039] px-4 py-3"
+            className="mb-5 min-h-[80px] flex-row items-center rounded-2xl border border-[#E11D48]/40 bg-[#111B2A] px-4 py-3"
           >
-            <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#082B49]">
+            <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#E11D48]/10 border border-[#E11D48]/30">
               <MaterialCommunityIcons
                 name="motorbike"
-                size={32}
-                color="#0EA5E9"
+                size={26}
+                color="#E11D48"
               />
             </View>
 
             <View className="ml-4 flex-1">
-              <Text className="text-[16px] font-extrabold text-white">
+              <Text className="text-[15px] font-extrabold text-white">
                 Switch to Rider Mode
               </Text>
-              <Text className="mt-0.5 text-[13px] text-[#A8C9E9]">
-                Become a rider and earn money
+              <Text className="mt-0.5 text-xs text-slate-400">
+                Accept delivery runs and earn money across Lagos
               </Text>
             </View>
 
-            <View className="rounded-full border-2 border-[#029DEB] px-4 py-2.5">
-              <Text className="text-[13px] font-bold text-[#0EA5E9]">
+            <View className="rounded-full border border-[#E11D48] bg-[#E11D48]/10 px-3 py-2">
+              <Text className="text-xs font-bold text-[#E11D48]">
                 Switch Now
               </Text>
             </View>
@@ -392,28 +384,28 @@ export default function ProfileScreen({
           {/* Support and about */}
           <View className="mb-5">
             <SettingRow
-              icon="headset"
+              icon="headset-outline"
               title="Support & Help"
-              subtitle="Get help or contact support"
+              subtitle="Get help or contact dispatch support"
               onPress={onSupport}
             />
 
             <View className="h-2" />
 
             <SettingRow
-              icon="information-circle"
+              icon="information-circle-outline"
               title="About CodaExpress"
-              subtitle="App version, terms and more"
+              subtitle="App version, terms and policies"
               onPress={onAbout}
               trailing={
                 <View className="flex-row items-center">
-                  <Text className="mr-3 text-[13px] font-medium text-[#A8C9E9]">
+                  <Text className="mr-3 text-xs font-medium text-slate-400">
                     v2.8.0
                   </Text>
                   <Ionicons
                     name="chevron-forward"
-                    size={23}
-                    color="#A8C9E9"
+                    size={20}
+                    color="#64748B"
                   />
                 </View>
               }
@@ -424,11 +416,11 @@ export default function ProfileScreen({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleLogout}
-            className="mb-5 h-[55px] flex-row items-center justify-center rounded-2xl bg-[#E11D48]"
+            className="mb-5 h-14 flex-row items-center justify-center rounded-2xl bg-rose-950/40 border border-rose-900/50"
           >
-            <Ionicons name="log-out-outline" size={23} color="#FFFFFF" />
-            <Text className="ml-3 text-[17px] font-extrabold text-white">
-              Log Out
+            <Ionicons name="log-out-outline" size={20} color="#FB7185" />
+            <Text className="ml-2 text-sm font-extrabold text-rose-400">
+              Log Out of CodaExpress
             </Text>
           </TouchableOpacity>
         </View>

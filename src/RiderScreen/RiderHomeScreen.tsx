@@ -1,20 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Switch,
+  Modal,
+  Alert,
 } from "react-native";
+import Mapbox from "@rnmapbox/maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const token = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+if (token) Mapbox.setAccessToken(token);
 
 type Props = {
   walletBalance?: number;
   currencySymbol?: string;
   onTopUp?: () => void;
   onNavigateTab?: (tab: string) => void;
-  onSimulateIncomingOrder?: () => void;
+  onSimulateIncomingOrder?: (order?: any) => void;
 };
 
 export default function RiderHomeScreen({
@@ -25,72 +30,149 @@ export default function RiderHomeScreen({
   onSimulateIncomingOrder = () => {},
 }: Props) {
   const insets = useSafeAreaInsets();
+
   const [isOnline, setIsOnline] = useState(true);
+  const [incomingOrder, setIncomingOrder] = useState<any>(null);
+
+  // Urgent Acceptance Counter (15 seconds)
+  const [timeLeft, setTimeLeft] = useState(15);
+
+  useEffect(() => {
+    if (isOnline) {
+      const timer = setTimeout(() => {
+        triggerSimulatedOrder();
+      }, 6000);
+      return () => clearTimeout(timer);
+    } else {
+      setIncomingOrder(null);
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (!incomingOrder) return;
+
+    setTimeLeft(15);
+    const countdown = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdown);
+          setIncomingOrder(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdown);
+  }, [incomingOrder]);
+
+  const triggerSimulatedOrder = () => {
+    setIncomingOrder({
+      id: "CDX-94821",
+      pickup: "Bola Matanmi St, Lekki Phase 1",
+      dropoff: "Royal Garden Estate, Ajah",
+      distance: "4.2 km",
+      estimatedEarnings: "₦2,600",
+      customerName: "Paul O.",
+      customerPhone: "+2348031234567",
+      packageType: "Documents & Laptop Box",
+    });
+  };
+
+  const handleAcceptOrder = () => {
+    if (!incomingOrder) return;
+    const acceptedOrder = { ...incomingOrder };
+    
+    // Clear the modal
+    setIncomingOrder(null);
+    
+    // Trigger transition to ActiveOrderTrackerScreen
+    onSimulateIncomingOrder(acceptedOrder);
+  };
+
+  const handleDeclineOrder = () => {
+    setIncomingOrder(null);
+  };
 
   return (
-    <View style={{ paddingTop: insets.top }} className="flex-1 bg-darkBg">
-      {/* HEADER */}
-      <View className="flex-row items-center justify-between px-4 py-3.5 bg-darkHeader border-b border-darkBorder">
-        <View className="flex-row items-center gap-2.5">
-          <View className="w-9 h-9 rounded-xl bg-brand items-center justify-center shadow-rose-glow">
-            <Ionicons name="flash" size={18} color="#FFFFFF" />
+    <View className="flex-1 bg-[#06090F]">
+      {/* MAPBOX MAP */}
+      <View className="absolute inset-0 bg-[#0B101D]">
+        {token ? (
+          <Mapbox.MapView
+            style={{ flex: 1 }}
+            styleURL={Mapbox.StyleURL.Dark}
+            scaleBarEnabled={false}
+            logoEnabled={false}
+            attributionEnabled={false}
+          >
+            <Mapbox.Camera
+              defaultSettings={{
+                centerCoordinate: [3.3792, 6.5244],
+                zoomLevel: 14,
+              }}
+            />
+          </Mapbox.MapView>
+        ) : (
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-slate-500 text-xs">Mapbox Token Missing</Text>
           </View>
-          <Text className="text-white text-lg font-black tracking-tight">
-            Coda<Text className="text-brand">Express</Text>
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => console.log("Notifications")}
-          className="w-11 h-11 rounded-2xl bg-darkCard border border-darkBorder items-center justify-center relative shadow-sm"
-          activeOpacity={0.8}
-        >
-          <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-          <View className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-brand" />
-        </TouchableOpacity>
+        )}
       </View>
 
-      <ScrollView
-        className="flex-1 px-4 pt-4"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 30 }}
+      {/* FLOATING HEADER */}
+      <View
+        className="absolute left-4 right-4 z-20 bg-[#090D16]/95 border border-slate-800 p-3 rounded-3xl shadow-2xl backdrop-blur-md"
+        style={{ top: insets.top + 8 }}
       >
-        {/* WALLET BALANCE CARD */}
-        <View className="bg-darkCard border border-darkBorder rounded-4xl p-5 shadow-card-dark mb-4 flex-row items-center justify-between">
-          <View>
-            <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-              Wallet Balance
-            </Text>
-            <Text className="text-white text-2xl font-black tracking-tight">
-              {currencySymbol}{walletBalance.toLocaleString()}
+        <View className="flex-row items-center justify-between mb-3 px-1">
+          <View className="flex-row items-center gap-2">
+            <View className="w-8 h-8 rounded-xl bg-[#E11D48] items-center justify-center shadow-lg">
+              <Ionicons name="flash" size={16} color="#FFFFFF" />
+            </View>
+            <Text className="text-white text-base font-black tracking-tight">
+              Coda<Text className="text-[#E11D48]">Express</Text>
+              <Text className="text-slate-400 text-[10px] font-bold ml-1.5">• Rider</Text>
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={onTopUp}
-            className="bg-brand px-5 py-3 rounded-2xl flex-row items-center gap-1.5 shadow-rose-glow"
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={16} color="#FFFFFF" />
-            <Text className="text-white text-xs font-black">Top Up</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={onTopUp}
+              className="bg-[#111B2A] border border-slate-800 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
+              activeOpacity={0.8}
+            >
+              <Ionicons name="wallet-outline" size={15} color="#10B981" />
+              <Text className="text-emerald-400 text-xs font-black">
+                {currencySymbol}{walletBalance.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => Alert.alert("Notifications", "No new dispatch alerts.")}
+              className="w-8 h-8 rounded-xl bg-[#111B2A] border border-slate-800 items-center justify-center relative"
+              activeOpacity={0.8}
+            >
+              <Ionicons name="notifications-outline" size={16} color="#FFFFFF" />
+              <View className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onNavigateTab("profile")}
+              className="w-8 h-8 rounded-xl bg-[#E11D48]/10 border border-[#E11D48]/40 items-center justify-center"
+              activeOpacity={0.8}
+            >
+              <Ionicons name="person" size={15} color="#E11D48" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* GO ONLINE TOGGLE STATUS CARD */}
-        <View className="bg-darkCard border border-darkBorder rounded-4xl p-5 mb-6 shadow-card-dark flex-row items-center justify-between">
-          <View className="flex-row items-center gap-3.5">
-            <View className={`w-10 h-10 rounded-2xl items-center justify-center border ${
-              isOnline ? "bg-status-success/20 border-status-success/40" : "bg-slate-800 border-slate-700"
-            }`}>
-              <View className={`w-3.5 h-3.5 rounded-full ${isOnline ? "bg-status-success" : "bg-slate-500"}`} />
-            </View>
+        <View className="flex-row items-center justify-between bg-[#111B2A] border border-slate-800 px-3.5 py-2.5 rounded-2xl">
+          <View className="flex-row items-center gap-2.5">
+            <View className={`w-3 h-3 rounded-full ${isOnline ? "bg-emerald-500" : "bg-slate-600"}`} />
             <View>
-              <Text className="text-white text-sm font-extrabold">
-                {isOnline ? "Go Online" : "You are Offline"}
-              </Text>
-              <Text className="text-slate-400 text-xs font-semibold mt-0.5">
-                {isOnline ? "Ready to receive orders" : "Toggle on to start earning"}
-              </Text>
+              <Text className="text-white text-xs font-black">{isOnline ? "YOU ARE ONLINE" : "YOU ARE OFFLINE"}</Text>
+              <Text className="text-slate-400 text-[9px]">{isOnline ? "Searching for package runs..." : "Go online to start receiving orders"}</Text>
             </View>
           </View>
 
@@ -101,86 +183,99 @@ export default function RiderHomeScreen({
             thumbColor={isOnline ? "#FFFFFF" : "#94A3B8"}
           />
         </View>
+      </View>
 
-        {/* WAITING FOR ORDERS RADAR STATE */}
-        <View className="items-center justify-center py-10 px-4 bg-darkCard border border-darkBorder rounded-4xl mb-6 shadow-card-dark">
-          {isOnline ? (
-            <>
-              {/* Pulsing visual indicator */}
-              <View className="relative items-center justify-center mb-5">
-                <View className="w-24 h-24 rounded-full bg-accent-cyan/10 absolute animate-ping" />
-                <View className="w-20 h-20 rounded-full bg-accent-cyan/20 items-center justify-center border border-accent-cyan/40 shadow-cyan-glow">
-                  <Ionicons name="bicycle" size={32} color="#00E5FF" />
+      {/* TEST TRIGGER BUTTON */}
+      {isOnline && !incomingOrder && (
+        <View className="absolute top-44 left-4 right-4 z-10 items-center">
+          <TouchableOpacity
+            onPress={triggerSimulatedOrder}
+            className="bg-[#090D16]/90 border border-[#E11D48]/40 px-4 py-2.5 rounded-full flex-row items-center gap-2 shadow-xl backdrop-blur-md"
+            activeOpacity={0.85}
+          >
+            <View className="w-2 h-2 rounded-full bg-[#E11D48]" />
+            <Text className="text-white text-xs font-bold">⚡ Simulate Incoming Package Request</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* QUICK STATS SHEET */}
+      {!incomingOrder && (
+        <View
+          className="absolute bottom-6 left-4 right-4 bg-[#090D16] border border-slate-800 p-4 rounded-3xl shadow-2xl flex-row justify-between items-center"
+          style={{ marginBottom: insets.bottom }}
+        >
+          <TouchableOpacity onPress={() => onNavigateTab("history")} className="flex-1 items-center border-r border-slate-800">
+            <Text className="text-slate-400 text-[10px] uppercase font-bold">Today's Runs</Text>
+            <Text className="text-white text-lg font-black mt-0.5">8</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={onTopUp} className="flex-1 items-center border-r border-slate-800">
+            <Text className="text-slate-400 text-[10px] uppercase font-bold">Earnings</Text>
+            <Text className="text-emerald-400 text-lg font-black mt-0.5">₦19,400</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => onNavigateTab("profile")} className="flex-1 items-center">
+            <Text className="text-slate-400 text-[10px] uppercase font-bold">Rating</Text>
+            <Text className="text-amber-400 text-lg font-black mt-0.5">★ 4.95</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* INCOMING REQUEST MODAL */}
+      <Modal visible={!!incomingOrder} animationType="slide" transparent onRequestClose={handleDeclineOrder}>
+        <View className="flex-1 bg-[#030712CC] justify-end">
+          <View className="bg-[#090D16] rounded-t-[32px] border-t border-slate-800 p-5 shadow-2xl" style={{ paddingBottom: Math.max(insets.bottom + 10, 20) }}>
+            <View className="w-12 h-1.5 rounded-full bg-slate-700 self-center mb-4" />
+
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="bg-[#E11D48]/10 border border-[#E11D48]/30 px-3 py-1 rounded-full flex-row items-center gap-2">
+                <Ionicons name="time-outline" size={14} color="#E11D48" />
+                <Text className="text-[#E11D48] text-xs font-black uppercase">Accept in {timeLeft}s</Text>
+              </View>
+
+              <Text className="text-emerald-400 text-2xl font-black">{incomingOrder?.estimatedEarnings}</Text>
+            </View>
+
+            <View className="w-full h-1.5 bg-slate-800 rounded-full mb-4 overflow-hidden">
+              <View className="h-full bg-[#E11D48] rounded-full" style={{ width: `${(timeLeft / 15) * 100}%` }} />
+            </View>
+
+            <Text className="text-white text-base font-extrabold mb-1">{incomingOrder?.packageType}</Text>
+            <Text className="text-slate-400 text-xs mb-4">
+              Customer: {incomingOrder?.customerName} • {incomingOrder?.distance} away
+            </Text>
+
+            <View className="bg-[#111B2A] border border-slate-800 rounded-2xl p-4 mb-5">
+              <View className="flex-row items-center mb-3">
+                <View className="w-3 h-3 rounded-full bg-emerald-500 mr-3" />
+                <View className="flex-1">
+                  <Text className="text-slate-400 text-[10px] uppercase font-bold">Pickup</Text>
+                  <Text className="text-white text-xs font-bold" numberOfLines={1}>{incomingOrder?.pickup}</Text>
                 </View>
               </View>
 
-              <Text className="text-white text-base font-black mb-1">
-                Waiting for Orders...
-              </Text>
-              <Text className="text-slate-400 text-xs font-semibold text-center mb-6">
-                Stay online to get nearby grocery & dispatch requests
-              </Text>
-
-              {/* TEST TRIGGER BUTTON FOR DEVELOPMENT */}
-              <TouchableOpacity
-                onPress={onSimulateIncomingOrder}
-                className="bg-darkHeader border border-accent-cyan/30 px-4 py-2.5 rounded-2xl"
-                activeOpacity={0.8}
-              >
-                <Text className="text-accent-cyan text-xs font-extrabold">
-                  ⚡ Simulate Incoming Order
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View className="items-center py-4">
-              <View className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 items-center justify-center mb-3">
-                <Ionicons name="moon-outline" size={28} color="#64748B" />
+              <View className="flex-row items-center">
+                <View className="w-3 h-3 rounded-full bg-[#E11D48] mr-3" />
+                <View className="flex-1">
+                  <Text className="text-slate-400 text-[10px] uppercase font-bold">Drop-off</Text>
+                  <Text className="text-white text-xs font-bold" numberOfLines={1}>{incomingOrder?.dropoff}</Text>
+                </View>
               </View>
-              <Text className="text-white text-base font-bold mb-1">You are currently offline</Text>
-              <Text className="text-slate-400 text-xs text-center">Switch on "Go Online" above to start receiving dispatch tasks.</Text>
             </View>
-          )}
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity onPress={handleDeclineOrder} className="flex-1 bg-slate-900 border border-slate-800 py-4 rounded-2xl items-center">
+                <Text className="text-slate-400 font-bold text-sm">Decline</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={handleAcceptOrder} className="flex-1 bg-[#E11D48] py-4 rounded-2xl items-center shadow-lg">
+                <Text className="text-white font-black text-sm">Accept Order ({timeLeft}s)</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </ScrollView>
-
-      {/* BOTTOM NAVIGATION BAR */}
-      <View
-        style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-        className="flex-row items-center justify-around px-2 pt-3 bg-darkHeader border-t border-darkBorder"
-      >
-        <TouchableOpacity
-          onPress={() => onNavigateTab("home")}
-          className="items-center py-1 px-4"
-        >
-          <Ionicons name="home" size={20} color="#E11D48" />
-          <Text className="text-brand text-[10px] font-black mt-1">Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => onNavigateTab("wallet")}
-          className="items-center py-1 px-4 opacity-60"
-        >
-          <Ionicons name="wallet-outline" size={20} color="#FFFFFF" />
-          <Text className="text-slate-400 text-[10px] font-bold mt-1">Wallet</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => onNavigateTab("history")}
-          className="items-center py-1 px-4 opacity-60"
-        >
-          <Ionicons name="time-outline" size={20} color="#FFFFFF" />
-          <Text className="text-slate-400 text-[10px] font-bold mt-1">History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => onNavigateTab("profile")}
-          className="items-center py-1 px-4 opacity-60"
-        >
-          <Ionicons name="person-outline" size={20} color="#FFFFFF" />
-          <Text className="text-slate-400 text-[10px] font-bold mt-1">Profile</Text>
-        </TouchableOpacity>
-      </View>
+      </Modal>
     </View>
   );
 }

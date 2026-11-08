@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Import your Rider screens
+// Import Rider screens
 import RiderHomeScreen from "./RiderHomeScreen";
 import ActiveOrderTrackerScreen from "./ActiveOrderTrackerScreen";
 import WalletScreen from "./WalletScreen";
+import RiderProfileScreen from "./RiderProfileScreen";
 
 // Import offline notice
 import OfflineNotice from "./OfflineNotice";
@@ -15,18 +16,12 @@ type RiderRoute = "home" | "wallet" | "history" | "profile" | "active_order";
 export default function RiderNavigator() {
   const insets = useSafeAreaInsets();
   
-  // App navigation state (can be swapped with React Navigation later if preferred)
   const [currentRoute, setCurrentRoute] = useState<RiderRoute>("home");
-  const [isConnected, setIsConnected] = useState(true); // Connected by default
-
-  // Simulated network toggle for testing offline stability
-  const toggleNetworkTest = () => {
-    setIsConnected((prev) => !prev);
-  };
+  const [isConnected, setIsConnected] = useState(true);
 
   return (
-    <View className="flex-1 bg-darkBg">
-      {/* GLOBAL OFFLINE NOTICE BANNER (Prevents crashes/scratching) */}
+    <View className="flex-1 bg-[#06090F]">
+      {/* GLOBAL OFFLINE NOTICE BANNER */}
       <OfflineNotice isConnected={isConnected} />
 
       {/* DYNAMIC SCREEN ROUTER */}
@@ -57,8 +52,16 @@ export default function RiderNavigator() {
           />
         )}
 
-        {/* Fallback for other tabs */}
-        {(currentRoute === "history" || currentRoute === "profile") && (
+        {currentRoute === "profile" && (
+          <RiderProfileScreen
+            onBack={() => setCurrentRoute("home")}
+            onLogout={() => {
+              console.log("Logging out rider...");
+            }}
+          />
+        )}
+
+        {currentRoute === "history" && (
           <RiderHomeScreen
             onNavigateTab={(tab) => setCurrentRoute(tab as RiderRoute)}
             onSimulateIncomingOrder={() => setCurrentRoute("active_order")}

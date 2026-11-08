@@ -43,14 +43,9 @@ const demoOrders: CustomerOrder[] = [
 
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
-  const navigation =
-    useNavigation<
-      NativeStackNavigationProp<CustomerStackParamList>
-    >();
-
-  const [filter, setFilter] =
-    useState<OrderStatus>("active");
+  const [filter, setFilter] = useState<OrderStatus>("active");
 
   const filteredOrders = demoOrders.filter(
     (order) => order.status === filter
@@ -58,10 +53,15 @@ export default function OrdersScreen() {
 
   const handleTrackOrder = (order: CustomerOrder) => {
     if (order.status !== "active") return;
-    navigation.navigate("PackageDelivery");
+    // Pass the orderId directly to the tracking screen
+    navigation.navigate("DeliveryTracking", {
+      orderId: order.id,
+      serviceType: "delivery",
+    });
   };
 
   const handleBookAgain = (_order: CustomerOrder) => {
+    // Direct them to book a new rider
     navigation.navigate("PackageDelivery");
   };
 
@@ -194,7 +194,7 @@ export default function OrdersScreen() {
           <Text className="text-white font-bold text-sm mx-3">
             {order.status === "active"
               ? "View Delivery"
-              : "Book Again"}
+              : "Book Another Rider"}
           </Text>
 
           <Ionicons
