@@ -8,12 +8,16 @@ import React, {
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Mapbox from "@rnmapbox/maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,7 +35,14 @@ type Props = {
   vehicle: RideOption;
   onBack: () => void;
   onEditLocations: () => void;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: (details: {
+    pickupContactName: string;
+    pickupContactPhone: string;
+    dropoffContactName: string;
+    dropoffContactPhone: string;
+    packageType: string;
+    descriptions: string;
+  }) => void | Promise<void>;
 };
 
 type Coordinates = [number, number];
@@ -82,12 +93,48 @@ export default function DeliveryReviewScreen({
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [durationMin, setDurationMin] = useState<number | null>(null);
 
+  // Prefilled & wider contact fields (editable)
+  const [pickupContactName, setPickupContactName] = useState("Sender");
+  const [pickupContactPhone, setPickupContactPhone] = useState(""); // Prefilled from login session
+  const [dropoffContactName, setDropoffContactName] = useState("Recipient");
+  const [dropoffContactPhone, setDropoffContactPhone] = useState("");
+  const [packageType, setPackageType] = useState("Standard Parcel");
+  const [descriptions, setDescriptions] = useState("");
+
   const pickup = route.pickup.coordinates;
   const dropoff = route.dropoff.coordinates;
 
   const validPickup = isValidCoordinates(pickup);
   const validDropoff = isValidCoordinates(dropoff);
   const good = validPickup && validDropoff;
+
+
+
+
+ // Load the authenticated user's real phone number on mount
+  useEffect(() => {
+    async function loadUserProfile() {
+      try {
+        const storedPhone = await AsyncStorage.getItem("@codaexpress_user_phone");
+        const storedUser = await AsyncStorage.getItem("@codaexpress_user_profile");
+        const tokenPhone = await AsyncStorage.getItem("phone_number"); // Fallback key check
+        
+        if (storedPhone) {
+          setPickupContactPhone(storedPhone);
+        } else if (tokenPhone) {
+          setPickupContactPhone(tokenPhone);
+        } else if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed.phone_number) {
+            setPickupContactPhone(parsed.phone_number);
+          }
+        }
+      } catch (err) {
+        console.log("Failed to load user phone from storage:", err);
+      }
+    }
+    loadUserProfile();
+  }, []);
 
   const center = useMemo<Coordinates>(() => {
     if (validPickup && validDropoff) {
@@ -114,7 +161,7 @@ export default function DeliveryReviewScreen({
         Math.min(pickup[1], dropoff[1]),
       ] as Coordinates,
       paddingTop: 120,
-      paddingBottom: 240,
+      paddingBottom: 340,
       paddingLeft: 60,
       paddingRight: 60,
     };
@@ -186,11 +233,23 @@ export default function DeliveryReviewScreen({
   const handleConfirm = async () => {
     if (!good || busy || confirmationLocked.current) return;
 
+    if (!pickupContactPhone.trim() || !dropoffContactPhone.trim()) {
+      Alert.alert("Missing Information", "Please provide phone numbers for both sender and recipient.");
+      return;
+    }
+
     confirmationLocked.current = true;
     setBusy(true);
 
     try {
-      await onConfirm();
+      await onConfirm({
+        pickupContactName: pickupContactName.trim() || "Sender",
+        pickupContactPhone: pickupContactPhone.trim(),
+        dropoffContactName: dropoffContactName.trim() || "Recipient",
+        dropoffContactPhone: dropoffContactPhone.trim(),
+        packageType: packageType.trim() || "Standard Parcel",
+        descriptions: descriptions.trim(),
+      });
     } catch (error) {
       Alert.alert(
         "Booking failed",
@@ -208,7 +267,7 @@ export default function DeliveryReviewScreen({
       cameraRef.current.fitBounds(
         bounds.ne,
         bounds.sw,
-        [120, 60, 240, 60],
+        [120, 60, 340, 60],
         600
       );
     } else {
@@ -311,57 +370,104 @@ export default function DeliveryReviewScreen({
         </TouchableOpacity>
       </View>
 
-      {/* 3. COMPACT FLOATING REVIEW SHEET */}
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}>
-        <View style={styles.handle} />
+      {/* 3. WIDER & PREFILLED CONTACT EDIT SHEET */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom + 10, 16) }]}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={styles.handle} />
 
-        {/* ROUTE COMPACT SUMMARY */}
-        <View style={styles.routeCard}>
-          <View style={styles.routeRow}>
-            <View style={styles.dotGreen} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {route.pickup.name || route.pickup.address}
-            </Text>
-          </View>
-
-          <View style={styles.routeLine} />
-
-          <View style={styles.routeRow}>
-            <View style={styles.dotRed} />
-            <Text style={styles.routeText} numberOfLines={1}>
-              {route.dropoff.name || route.dropoff.address}
-            </Text>
-          </View>
-        </View>
-
-        {/* VEHICLE + CONFIRM ROW */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity onPress={onEditLocations} style={styles.vehicleTile} activeOpacity={0.8}>
-            <Ionicons name="bicycle" size={20} color="#E11D48" />
-            <View style={{ marginLeft: 8, flex: 1 }}>
-              <Text style={styles.vehicleName} numberOfLines={1}>{vehicle.name}</Text>
-              <Text style={styles.vehiclePrice}>{vehicle.price}</Text>
+          {/* ROUTE SUMMARY CARD */}
+          <View style={styles.routeCard}>
+            <View style={styles.routeRow}>
+              <View style={styles.dotGreen} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {route.pickup.name || route.pickup.address}
+              </Text>
+              <TouchableOpacity onPress={onEditLocations}>
+                <Ionicons name="pencil" size={14} color="#38BDF8" />
+              </TouchableOpacity>
             </View>
-            <Ionicons name="pencil" size={14} color="#64748B" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleConfirm}
-            disabled={!good || busy}
-            activeOpacity={0.85}
-            style={[styles.confirmButton, (!good || busy) && { opacity: 0.5 }]}
-          >
-            {busy ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <>
-                <Text style={styles.confirmText}>Confirm</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+            <View style={styles.routeLine} />
+
+            <View style={styles.routeRow}>
+              <View style={styles.dotRed} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {route.dropoff.name || route.dropoff.address}
+              </Text>
+            </View>
+          </View>
+
+          {/* WIDER CONTACT & PACKAGE EDIT FIELDS */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Sender & Recipient Contacts (Editable)</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Sender Phone (Prefilled)</Text>
+              <TextInput
+                style={styles.wideInput}
+                placeholder="Sender Phone number"
+                placeholderTextColor="#64748B"
+                keyboardType="phone-pad"
+                value={pickupContactPhone}
+                onChangeText={setPickupContactPhone}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Recipient Phone</Text>
+              <TextInput
+                style={styles.wideInput}
+                placeholder="Enter recipient phone number"
+                placeholderTextColor="#64748B"
+                keyboardType="phone-pad"
+                value={dropoffContactPhone}
+                onChangeText={setDropoffContactPhone}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Package Description / Type</Text>
+              <TextInput
+                style={styles.wideInput}
+                placeholder="e.g. Documents, Electronics, Fragile"
+                placeholderTextColor="#64748B"
+                value={packageType}
+                onChangeText={setPackageType}
+              />
+            </View>
+          </View>
+
+          {/* VEHICLE + CONFIRM ROW */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity onPress={onEditLocations} style={styles.vehicleTile} activeOpacity={0.8}>
+              <Ionicons name="bicycle" size={20} color="#E11D48" />
+              <View style={{ marginLeft: 8, flex: 1 }}>
+                <Text style={styles.vehicleName} numberOfLines={1}>{vehicle.name}</Text>
+                <Text style={styles.vehiclePrice}>{vehicle.price}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleConfirm}
+              disabled={!good || busy}
+              activeOpacity={0.85}
+              style={[styles.confirmButton, (!good || busy) && { opacity: 0.5 }]}
+            >
+              {busy ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.confirmText}>Dispatch Rider</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -453,7 +559,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 13,
   },
-  sheet: {
+  sheetContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
@@ -465,6 +571,7 @@ const styles = StyleSheet.create({
     borderColor: "#1E293B",
     paddingHorizontal: 18,
     paddingTop: 10,
+    maxHeight: '72%',
     elevation: 12,
     zIndex: 10,
   },
@@ -478,7 +585,7 @@ const styles = StyleSheet.create({
   },
   routeCard: {
     backgroundColor: "#0F172A",
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#1E293B",
     padding: 12,
@@ -514,10 +621,43 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     flex: 1,
   },
+  inputSection: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 10,
+    letterSpacing: 0.5,
+  },
+  inputGroup: {
+    marginBottom: 10,
+  },
+  inputLabel: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  wideInput: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    width: "100%",
+  },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    marginTop: 4,
   },
   vehicleTile: {
     flex: 1,
@@ -527,7 +667,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1E293B",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 16,
   },
   vehicleName: {
@@ -545,7 +685,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#E11D48",
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: 16,
     gap: 8,
   },

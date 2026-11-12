@@ -107,7 +107,7 @@ export default function App() {
         {/* WELCOME */}
         {currentScreen === 'welcome' && (
           <WelcomeScreen
-            onGetStarted={() => setCurrentScreen('login')}
+            onGetStarted={() => setCurrentScreen('customerHome')}
             // onGetStarted={() => setCurrentScreen('Approved')}
           />
         )}
