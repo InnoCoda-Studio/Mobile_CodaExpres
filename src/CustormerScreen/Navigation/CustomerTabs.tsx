@@ -42,6 +42,7 @@ export type CustomerStackParamList = {
     pickup?: string;
     dropoff?: string;
     price?: string;
+    dropoffPin?: string; // <-- Added to carry the 4-digit Django PIN
   };
 
   DeliveryTracking: {

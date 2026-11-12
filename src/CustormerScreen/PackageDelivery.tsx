@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Image, Animated, Alert } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,8 +15,10 @@ import RideOptionsScreen, { type RideOption } from "./RideOptionsScreen";
 import BottomSheet from './components/BottomSheet';
 import DeliveryReviewScreen from "./DeliveryReviewScreen";
 import DeliveryTrackingScreen, { type DeliveryTrackingData } from "./DeliveryTrackingScreen";
+import { bookDeliveryOrder } from "../api/client";
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+const RECENT_DROPOFF_KEY = "@codaexpress_recent_dropoff";
 
 if (!MAPBOX_TOKEN) {
   console.warn("Mapbox public token is missing from .env");
@@ -28,12 +31,14 @@ const PackageDelivery = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   const [currentPickup, setCurrentPickup] = useState<Place | null>(null);
+  const [recentDropoffName, setRecentDropoffName] = useState<string | null>(null);
 
   const [showRouteSearch, setShowRouteSearch] = useState(false);
   const [showRideOptions, setShowRideOptions] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<{ pickup: Place; dropoff: Place } | null>(null);
 
-  const [userCoords, setUserCoords] = useState<[number, number]>([3.3792, 6.5244]);
+  // Neutral initial coordinates until device GPS locks on
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
   const [statusText, setStatusText] = useState("Looking for GPS...");
   const [isDark, setIsDark] = useState(true);
 
@@ -45,13 +50,26 @@ const PackageDelivery = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<RideOption | null>(null);
   const [trackingData, setTrackingData] = useState<DeliveryTrackingData | null>(null);
 
-  const [nearbyRiders] = useState([
-    { id: 'bike-1', type: 'bike', coords: [3.3820, 6.5260] as [number, number], image: require('../../assets/bisycle_move.png') },
-    { id: 'car-1', type: 'car', coords: [3.3750, 6.5220] as [number, number], image: require('../../assets/car.png') },
-    { id: 'destination', type: 'dropoff', coords: [3.3850, 6.5280] as [number, number], image: require('../../assets/location.png') },
-  ]);
+  // Dynamic nearby riders positioned relative to the user's live GPS anywhere in the world
+  const nearbyRiders = useMemo(() => {
+    if (!userCoords) return [];
+    const [lng, lat] = userCoords;
+    return [
+      { id: 'bike-1', type: 'bike', coords: [lng + 0.0028, lat + 0.0016] as [number, number], image: require('../../assets/bisycle_move.png') },
+      { id: 'car-1', type: 'car', coords: [lng - 0.0042, lat - 0.0024] as [number, number], image: require('../../assets/car.png') },
+    ];
+  }, [userCoords]);
 
-  // INSTANT GPS EFFECT
+  // Load saved recent drop-off location dynamically on mount
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_DROPOFF_KEY)
+      .then((saved) => {
+        if (saved) setRecentDropoffName(saved);
+      })
+      .catch((err) => console.log("Recent dropoff read error:", err));
+  }, []);
+
+  // INSTANT INTERNATIONAL GPS EFFECT
   useEffect(() => {
     let isMounted = true;
 
@@ -68,7 +86,7 @@ const PackageDelivery = () => {
           const { longitude, latitude } = lastKnown.coords;
           setUserCoords([longitude, latitude]);
           setStatusText("CodaExpress Active");
-          
+
           Animated.spring(bounceAnim, {
             toValue: 1,
             friction: 4,
@@ -87,10 +105,18 @@ const PackageDelivery = () => {
         const freshLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        
+
         const { longitude, latitude } = freshLocation.coords;
         if (isMounted) {
           setUserCoords([longitude, latitude]);
+          setStatusText("CodaExpress Active");
+
+          Animated.spring(bounceAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 50,
+            useNativeDriver: true,
+          }).start();
         }
 
         Location.reverseGeocodeAsync({ latitude, longitude })
@@ -111,7 +137,7 @@ const PackageDelivery = () => {
 
       } catch (error) {
         console.log("GPS Init Error:", error);
-        if (isMounted) setStatusText("Using default location");
+        if (isMounted) setStatusText("Enable GPS to locate");
       }
     }
 
@@ -122,6 +148,14 @@ const PackageDelivery = () => {
     };
   }, []);
 
+  // Map UI RideOption to Django VehicleRequirement choices
+  const mapVehicleTier = (vehicle: RideOption): 'BICYCLE' | 'MOTORCYCLE' | 'CAR' => {
+    const raw = (vehicle.id || vehicle.name || '').toUpperCase();
+    if (raw.includes('BICYCLE') || raw.includes('CYCLE')) return 'BICYCLE';
+    if (raw.includes('CAR')) return 'CAR';
+    return 'MOTORCYCLE';
+  };
+
   // 1. FULL-SCREEN ROUTE SEARCH MODAL
   if (showRouteSearch) {
     return (
@@ -129,8 +163,10 @@ const PackageDelivery = () => {
         <RouteSearchScreen
           onBack={() => setShowRouteSearch(false)}
           initialPickup={selectedRoute?.pickup ?? currentPickup}
-          onContinue={(route) => {
+          onContinue={async (route) => {
             setSelectedRoute(route);
+            setRecentDropoffName(route.dropoff.name);
+            AsyncStorage.setItem(RECENT_DROPOFF_KEY, route.dropoff.name).catch(() => {});
             setShowRouteSearch(false);
             setShowRideOptions(true);
           }}
@@ -181,7 +217,7 @@ const PackageDelivery = () => {
     );
   }
 
-  // 4. DELIVERY REVIEW SCREEN (Transitions to FindingRider)
+  // 4. DELIVERY REVIEW SCREEN (Books real Order on Django & Transitions to FindingRider)
   if (showReview && selectedRoute && selectedVehicle) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -196,12 +232,45 @@ const PackageDelivery = () => {
             setShowReview(false);
             setShowRouteSearch(true);
           }}
-          onConfirm={async () => {
-            setShowReview(false);
-            navigation.navigate("FindingRider", {
-              orderId: "CDX-" + Date.now().toString().slice(-6),
-              serviceType: "delivery",
-            });
+          onConfirm={async (details?: {
+            pickupContactName?: string;
+            pickupContactPhone?: string;
+            dropoffContactName?: string;
+            dropoffContactPhone?: string;
+            packageType?: string;
+            descriptions?: string;
+          }) => {
+            try {
+              const createdOrder = await bookDeliveryOrder({
+                pickup_address: selectedRoute.pickup.address || selectedRoute.pickup.name,
+                pickup_contact_name: details?.pickupContactName || "Sender",
+                pickup_contact_phone: details?.pickupContactPhone || "",
+                dropoff_address: selectedRoute.dropoff.address || selectedRoute.dropoff.name,
+                dropoff_contact_name: details?.dropoffContactName || "Recipient",
+                dropoff_contact_phone: details?.dropoffContactPhone || "",
+                package_type: details?.packageType || "Standard Parcel",
+                descriptions: details?.descriptions || "",
+                required_vehicle: mapVehicleTier(selectedVehicle),
+                distance: selectedVehicle.distance || "3.5 km",
+                estimated_earnings: Number(selectedVehicle.price) || 2600,
+              });
+
+              setShowReview(false);
+              navigation.navigate("FindingRider", {
+                orderId: String(createdOrder.id),
+                dropoffPin: createdOrder.dropoff_pin,
+                pickup: selectedRoute.pickup.name,
+                dropoff: selectedRoute.dropoff.name,
+                price: String(createdOrder.dynamic_earnings ?? selectedVehicle.price),
+                serviceType: "delivery",
+              });
+            } catch (error: any) {
+              console.error("Booking failed:", error?.response?.data || error);
+              Alert.alert(
+                "Booking Failed",
+                error?.response?.data?.detail || "Unable to place order. Please check your connection and try again."
+              );
+            }
           }}
         />
       </GestureHandlerRootView>
@@ -223,24 +292,28 @@ const PackageDelivery = () => {
           scrollEnabled={true}
           zoomEnabled={true}
         >
-          <Mapbox.Camera
-            zoomLevel={15}
-            centerCoordinate={userCoords}
-            animationMode={'flyTo'}
-          />
+          {userCoords && (
+            <Mapbox.Camera
+              zoomLevel={15}
+              centerCoordinate={userCoords}
+              animationMode={'flyTo'}
+            />
+          )}
 
-          <Mapbox.MarkerView id="userAvatarMarker" coordinate={userCoords}>
-            <Animated.View style={[styles.pinWrapper, { transform: [{ scale: bounceAnim }] }]}>
-              <View style={styles.avatarContainer}>
-                <Image 
-                  source={require('../../assets/MinimalPinkDefaultAvatarIcon.png')} 
-                  style={styles.avatarImage} 
-                  resizeMode="cover"
-                />
-              </View>
-              <View style={styles.pinStem} />
-            </Animated.View>
-          </Mapbox.MarkerView>
+          {userCoords && (
+            <Mapbox.MarkerView id="userAvatarMarker" coordinate={userCoords}>
+              <Animated.View style={[styles.pinWrapper, { transform: [{ scale: bounceAnim }] }]}>
+                <View style={styles.avatarContainer}>
+                  <Image 
+                    source={require('../../assets/MinimalPinkDefaultAvatarIcon.png')} 
+                    style={styles.avatarImage} 
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.pinStem} />
+              </Animated.View>
+            </Mapbox.MarkerView>
+          )}
 
           {nearbyRiders.map((rider) => (
             <Mapbox.MarkerView key={rider.id} id={rider.id} coordinate={rider.coords}>
@@ -253,6 +326,18 @@ const PackageDelivery = () => {
               </View>
             </Mapbox.MarkerView>
           ))}
+
+          {selectedRoute?.dropoff?.coordinates && (
+            <Mapbox.MarkerView id="selectedDropoffMarker" coordinate={selectedRoute.dropoff.coordinates}>
+              <View style={styles.vehicleContainer}>
+                <Image 
+                  source={require('../../assets/location.png')} 
+                  style={styles.vehicleImage} 
+                  resizeMode="cover"
+                />
+              </View>
+            </Mapbox.MarkerView>
+          )}
         </Mapbox.MapView>
 
         {/* TOP FLOATING BAR */}
@@ -273,7 +358,7 @@ const PackageDelivery = () => {
         <BottomSheet
           bottomOffset={insets.bottom + 12}
           maxDrag={-300}
-          destination={selectedRoute?.dropoff.name ?? null}
+          destination={selectedRoute?.dropoff.name ?? recentDropoffName}
           onVehicleSelect={(vehicle) => console.log("Selected vehicle:", vehicle)}
           onSearchPress={() => setShowRouteSearch(true)}
           onLocationPress={() => setShowRouteSearch(true)}
@@ -352,7 +437,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#090D16',
     borderWidth: 2,
     borderColor: '#E11D48',
-    justifyContent: 'center', // Fixed from justify.content
+    justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     shadowColor: '#000',

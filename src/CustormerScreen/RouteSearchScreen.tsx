@@ -34,53 +34,55 @@ interface RouteSearchProps {
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoiaW5ub2NvZGEiLCJhIjoiY212ZjE3NXBnMDBndTJ5cjI2bnkzejg1eiJ9.qbPEK--lMHUSft-0yMqRsg';
 
 const DEFAULT_PLACES: Place[] = [
-  { id: "1", name: "5b Admiralty Way", address: "Lekki Phase 1, Lagos", coordinates: [3.4723, 6.4474] },
-  { id: "2", name: "Murtala Muhammed Airport", address: "Ikeja, Lagos", coordinates: [3.3211, 6.5778] },
-  { id: "3", name: "Elegushi Beach", address: "Lekki, Lagos", coordinates: [3.4882, 6.4353] },
-  { id: "4", name: "Ajah Market", address: "Ajah, Lagos", coordinates: [3.5653, 6.4684] },
-  { id: "5", name: "Shoprite Ikeja City Mall", address: "Obafemi Awolowo Way, Ikeja", coordinates: [3.3592, 6.6018] },
+  { id: "1", name: "City Center", address: "Main Commercial District", coordinates: [3.3792, 6.5244] },
+  { id: "2", name: "International Airport", address: "Airport Terminal", coordinates: [3.3211, 6.5778] },
+  { id: "3", name: "Central Business District", address: "Financial Hub", coordinates: [3.4723, 6.4474] },
 ];
 
 const searchLocations = async (
   query: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  proximity?: [number, number]
 ): Promise<Place[]> => {
-  if (!MAPBOX_TOKEN) {
-    throw new Error("Mapbox token missing.");
-  }
+  if (!MAPBOX_TOKEN) return [];
+
+  const proximityParam = proximity ? `proximity=${proximity[0]},${proximity[1]}` : "proximity=3.3792,6.5244";
 
   const params = [
     `q=${encodeURIComponent(query.trim())}`,
     `access_token=${encodeURIComponent(MAPBOX_TOKEN)}`,
     "autocomplete=true",
-    "country=ng",
     "limit=10",
-    "proximity=3.3792,6.5244",
+    proximityParam,
   ].join("&");
 
   const url = `https://api.mapbox.com/search/geocode/v6/forward?${params}`;
 
-  const response = await fetch(url, { signal });
-  const data = await response.json();
+  try {
+    const response = await fetch(url, { signal });
+    const data = await response.json();
 
-  return (data.features ?? [])
-    .map((feature: any, index: number): Place | null => {
-      const properties = feature.properties;
-      const longitude = properties?.coordinates?.longitude ?? feature.geometry?.coordinates?.[0];
-      const latitude = properties?.coordinates?.latitude ?? feature.geometry?.coordinates?.[1];
+    return (data.features ?? [])
+      .map((feature: any, index: number): Place | null => {
+        const properties = feature.properties;
+        const longitude = properties?.coordinates?.longitude ?? feature.geometry?.coordinates?.[0];
+        const latitude = properties?.coordinates?.latitude ?? feature.geometry?.coordinates?.[1];
 
-      if (typeof longitude !== "number" || typeof latitude !== "number") {
-        return null;
-      }
+        if (typeof longitude !== "number" || typeof latitude !== "number") {
+          return null;
+        }
 
-      return {
-        id: properties?.mapbox_id ?? feature.id ?? `result-${index}`,
-        name: properties?.name_preferred ?? properties?.name ?? properties?.full_address ?? "Unknown location",
-        address: properties?.full_address ?? properties?.place_formatted ?? "Nigeria",
-        coordinates: [longitude, latitude],
-      };
-    })
-    .filter((place: Place | null): place is Place => place !== null);
+        return {
+          id: properties?.mapbox_id ?? feature.id ?? `result-${index}`,
+          name: properties?.name_preferred ?? properties?.name ?? properties?.full_address ?? "Unknown location",
+          address: properties?.full_address ?? properties?.place_formatted ?? "Global Location",
+          coordinates: [longitude, latitude],
+        };
+      })
+      .filter((place: Place | null): place is Place => place !== null);
+  } catch (error) {
+    return [];
+  }
 };
 
 export default function RouteSearchScreen({
@@ -90,7 +92,7 @@ export default function RouteSearchScreen({
 }: RouteSearchProps) {
   const insets = useSafeAreaInsets();
 
-  const fallbackCoords: [number, number] = initialPickup?.coordinates ?? [3.4723, 6.4474];
+  const fallbackCoords: [number, number] = initialPickup?.coordinates ?? [3.3792, 6.5244];
   const initialName = initialPickup?.name ?? "Current Location";
 
   const [pickupText, setPickupText] = useState(initialName);
@@ -99,14 +101,13 @@ export default function RouteSearchScreen({
   const [pickupPlace, setPickupPlace] = useState<Place | null>({
     id: "current-loc",
     name: initialName,
-    address: "Lagos, Nigeria",
+    address: initialPickup?.address ?? "Current Location",
     coordinates: fallbackCoords,
   });
   const [dropoffPlace, setDropoffPlace] = useState<Place | null>(null);
 
   const [activeField, setActiveField] = useState<Field>("dropoff");
   
-  // Track typing state separately for each field to prevent auto-searching prefilled text
   const [pickupTyped, setPickupTyped] = useState(false);
   const [dropoffTyped, setDropoffTyped] = useState(false);
 
@@ -123,13 +124,13 @@ export default function RouteSearchScreen({
           if (reverseGeocode && reverseGeocode.length > 0) {
             const loc = reverseGeocode[0];
             const streetName = loc.street || loc.name || loc.district || "Current Location";
-            const cityName = loc.city || loc.subregion || "Lagos";
+            const cityName = loc.city || loc.subregion || loc.region || "";
 
             setPickupText(streetName);
             setPickupPlace({
               id: "exact-gps-loc",
               name: streetName,
-              address: `${cityName}, Nigeria`,
+              address: [cityName, loc.country].filter(Boolean).join(", "),
               coordinates: [longitude, latitude],
             });
           }
@@ -147,7 +148,6 @@ export default function RouteSearchScreen({
   useEffect(() => {
     const query = activeQuery.trim();
 
-    // Only search if user has actively typed a query of length >= 2
     if (!isCurrentlyTyped || query.length < 2) {
       setPlaces(DEFAULT_PLACES);
       setIsLoading(false);
@@ -162,22 +162,22 @@ export default function RouteSearchScreen({
       setIsLoading(true);
 
       try {
-        const results = await searchLocations(query, controller.signal);
+        const results = await searchLocations(
+          query, 
+          controller.signal, 
+          pickupPlace?.coordinates ?? fallbackCoords
+        );
         if (!isActive || controller.signal.aborted) return;
         setPlaces(results);
       } catch (error: any) {
         if (!isActive || controller.signal.aborted) return;
-        const message = String(error?.message ?? error);
-        if (error?.name === "AbortError" || message.toLowerCase().includes("cancel")) {
-          return;
-        }
         setPlaces([]);
       } finally {
         if (isActive && !controller.signal.aborted) {
           setIsLoading(false);
         }
       }
-    }, 450);
+    }, 400);
 
     return () => {
       isActive = false;
@@ -229,14 +229,14 @@ export default function RouteSearchScreen({
     const finalPickup: Place = pickupPlace ?? {
       id: `manual-pickup-${Date.now()}`,
       name: pickupText.trim() || "Pickup Location",
-      address: "Lagos, Nigeria",
+      address: "Current Location",
       coordinates: fallbackCoords,
     };
 
     const finalDropoff: Place = dropoffPlace ?? {
       id: `manual-dropoff-${Date.now()}`,
       name: dropoffText.trim() || "Dropoff Destination",
-      address: "Lagos State, Nigeria",
+      address: "Destination Address",
       coordinates: [fallbackCoords[0] + 0.015, fallbackCoords[1] + 0.015],
     };
 
@@ -286,28 +286,26 @@ export default function RouteSearchScreen({
       }}
     >
       {/* HEADER */}
-      <View className="px-5 py-4 flex-row items-center border-b border-slate-800/80 bg-[#06090F]">
+      <View className="px-5 py-4 flex-row items-center border-b border-slate-800 bg-[#06090F]">
         <TouchableOpacity
           onPress={onBack}
-          className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-800 items-center justify-center shadow-lg"
+          className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-800 items-center justify-center"
           activeOpacity={0.8}
         >
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <View className="ml-4">
-          <Text className="text-white text-xl font-extrabold tracking-tight">
-            Plan your route
-          </Text>
+          <Text className="text-white text-xl font-extrabold">Plan your route</Text>
           <Text className="text-slate-400 text-xs">CodaExpress Delivery</Text>
         </View>
       </View>
 
       {/* ROUTE INPUT CONTAINER */}
-      <View className="mx-5 mt-5 bg-[#0A0F1D] border border-slate-800/80 rounded-3xl p-4 shadow-2xl relative">
+      <View className="mx-5 mt-5 bg-[#0A0F1D] border border-slate-800 rounded-3xl p-4 relative">
         <View className="absolute left-[31px] top-[48px] bottom-[48px] w-0.5 bg-slate-800 z-0" />
 
         {/* PICKUP ROW */}
-        <View className={`flex-row items-center p-3 rounded-2xl z-10 transition-all ${activeField === "pickup" ? "bg-slate-900/90 border border-emerald-500/50 shadow-md" : "bg-transparent"}`}>
+        <View className={`flex-row items-center p-3 rounded-2xl z-10 ${activeField === "pickup" ? "bg-slate-900 border border-emerald-500/50" : "bg-transparent"}`}>
           <View className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 items-center justify-center">
             <Ionicons name="radio-button-on" size={16} color="#10B981" />
           </View>
@@ -359,18 +357,18 @@ export default function RouteSearchScreen({
 
         {/* SWAP BUTTON DIVIDER */}
         <View className="flex-row items-center my-1.5 z-10">
-          <View className="flex-1 h-[1px] bg-slate-800/60 ml-11" />
+          <View className="flex-1 h-[1px] bg-slate-800 ml-11" />
           <TouchableOpacity
             onPress={swapLocations}
             activeOpacity={0.8}
-            className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 items-center justify-center mx-3 shadow-md"
+            className="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 items-center justify-center mx-3"
           >
             <Ionicons name="swap-vertical" size={16} color="#E11D48" />
           </TouchableOpacity>
         </View>
 
         {/* DROPOFF ROW */}
-        <View className={`flex-row items-center p-3 rounded-2xl z-10 transition-all ${activeField === "dropoff" ? "bg-slate-900/90 border border-rose-500/50 shadow-md" : "bg-transparent"}`}>
+        <View className={`flex-row items-center p-3 rounded-2xl z-10 ${activeField === "dropoff" ? "bg-slate-900 border border-rose-500/50" : "bg-transparent"}`}>
           <View className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 items-center justify-center">
             <Ionicons name="location" size={16} color="#E11D48" />
           </View>
@@ -426,7 +424,7 @@ export default function RouteSearchScreen({
             <TouchableOpacity
               onPress={() => selectPlace(item)}
               activeOpacity={0.8}
-              className="flex-row items-center bg-[#0B101D] border border-slate-800/60 px-4 py-3.5 rounded-2xl mb-2 shadow-sm"
+              className="flex-row items-center bg-[#0B101D] border border-slate-800 px-4 py-3.5 rounded-2xl mb-2"
             >
               <View className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 items-center justify-center">
                 <Ionicons name="location-outline" size={18} color="#E11D48" />
@@ -448,13 +446,13 @@ export default function RouteSearchScreen({
       </View>
 
       {/* STICKY BOTTOM CONFIRM BUTTON */}
-      <View className="px-5 pt-3 bg-[#06090F] border-t border-slate-800/80 shadow-2xl">
+      <View className="px-5 pt-3 bg-[#06090F] border-t border-slate-800">
         <TouchableOpacity
           disabled={!canContinue}
           onPress={handleConfirmLocations}
           activeOpacity={0.85}
-          className={`rounded-2xl py-4 flex-row items-center justify-center shadow-lg ${
-            canContinue ? "bg-[#E11D48] shadow-rose-900/30" : "bg-slate-800 opacity-40"
+          className={`rounded-2xl py-4 flex-row items-center justify-center ${
+            canContinue ? "bg-[#E11D48]" : "bg-slate-800 opacity-40"
           }`}
         >
           <Text className="text-white font-extrabold text-base tracking-wide">

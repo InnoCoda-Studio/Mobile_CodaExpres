@@ -5,19 +5,26 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  StyleSheet,
 } from "react-native";
 
-import Mapbox from '@rnmapbox/maps';
+import Mapbox from "@rnmapbox/maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Place } from "./RouteSearchScreen";
 
+export type DjangoVehicleType = "BICYCLE" | "MOTORCYCLE" | "CAR";
+
 export type RideOption = {
   id: string;
+  vehicleType: DjangoVehicleType;
   name: string;
   category: string;
   eta: string;
   price: string;
+  numericPrice: number;
+  distance?: string;
+  duration?: string;
   badge?: string;
   image: any;
 };
@@ -25,9 +32,15 @@ export type RideOption = {
 const PICKUP_PREPARATION_MIN = 5;
 
 const VEHICLE_SPEED_FACTOR: Record<string, number> = {
-  "1": 0.85, // Motorbike
-  "2": 1.5,  // Bicycle
-  "3": 1,    // Car / Van
+  "1": 0.85,
+  "2": 1.5,
+  "3": 1,
+};
+
+const VEHICLE_PRICING: Record<DjangoVehicleType, { base: number; perKm: number }> = {
+  BICYCLE: { base: 1000, perKm: 150 },
+  MOTORCYCLE: { base: 1500, perKm: 250 },
+  CAR: { base: 3500, perKm: 600 },
 };
 
 const getMinutes = (value: string): number => {
@@ -44,36 +57,38 @@ interface RideOptionsProps {
   onConfirm: (option: RideOption) => void;
 }
 
-const RIDE_OPTIONS: RideOption[] = [
+const BASE_RIDE_OPTIONS: Omit<RideOption, "price" | "numericPrice">[] = [
   {
     id: "1",
+    vehicleType: "MOTORCYCLE",
     name: "Motorbike Express",
     category: "Fast delivery • 1-2 parcels",
     eta: "10 min",
-    price: "₦2,500",
     badge: "FASTER",
     image: require("../../assets/bike-man-on-rider.png"),
   },
   {
     id: "2",
+    vehicleType: "BICYCLE",
     name: "Bicycle Courier",
     category: "Eco-friendly • Small items",
     eta: "25 min",
-    price: "₦1,500",
     image: require("../../assets/bisycle_move.png"),
   },
   {
     id: "3",
+    vehicleType: "CAR",
     name: "Coda Van / Car",
     category: "Large packages • Bulk cargo",
     eta: "15 min",
-    price: "₦6,500",
     badge: "HEAVY DUTY",
     image: require("../../assets/car.png"),
   },
 ];
 
-const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoiaW5ub2NvZGEiLCJhIjoiY212ZjE3NXBnMDBndTJ5cjI2bnkzejg1eiJ9.qbPEK--lMHUSft-0yMqRsg';
+const MAPBOX_TOKEN =
+  process.env.EXPO_PUBLIC_MAPBOX_TOKEN ||
+  "pk.eyJ1IjoiaW5ub2NvZGEiLCJhIjoiY212ZjE3NXBnMDBndTJ5cjI2bnkzejg1eiJ9.qbPEK--lMHUSft-0yMqRsg";
 
 export default function RideOptionsScreen({
   route,
@@ -84,8 +99,6 @@ export default function RideOptionsScreen({
   const [selectedId, setSelectedId] = useState<string>("1");
   const [paymentMethod] = useState<string>("Cash");
 
-  const selectedOption = RIDE_OPTIONS.find((opt) => opt.id === selectedId) ?? RIDE_OPTIONS[0];
-
   const pickupCoords = route.pickup.coordinates;
   const dropoffCoords = route.dropoff.coordinates;
 
@@ -94,6 +107,28 @@ export default function RideOptionsScreen({
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
+
+  const rideOptions: RideOption[] = useMemo(() => {
+    const effectiveKm = distanceKm ?? 4.0;
+    const distanceLabel = distanceKm !== null ? `${distanceKm.toFixed(1)} km` : "4.0 km";
+    const durationLabel = durationMin !== null ? `${Math.ceil(durationMin)} min` : undefined;
+
+    return BASE_RIDE_OPTIONS.map((opt) => {
+      const rate = VEHICLE_PRICING[opt.vehicleType];
+      const rawAmount = Math.round((rate.base + effectiveKm * rate.perKm) / 50) * 50;
+
+      return {
+        ...opt,
+        numericPrice: rawAmount,
+        price: `₦${rawAmount.toLocaleString()}`,
+        distance: distanceLabel,
+        duration: durationLabel,
+      };
+    });
+  }, [distanceKm, durationMin]);
+
+  const selectedOption =
+    rideOptions.find((opt) => opt.id === selectedId) ?? rideOptions[0];
 
   const hasValidCoordinates =
     Array.isArray(pickupCoords) &&
@@ -110,7 +145,7 @@ export default function RideOptionsScreen({
         (pickupCoords![1] + dropoffCoords![1]) / 2,
       ];
     }
-    return [3.3792, 6.5244];
+    return pickupCoords ?? dropoffCoords ?? [0, 0];
   }, [hasValidCoordinates, pickupCoords, dropoffCoords]);
 
   const confirmationLocked = useRef(false);
@@ -140,38 +175,23 @@ export default function RideOptionsScreen({
   };
 
   const [estimateBaseTime] = useState(() => Date.now());
-
   const pickupEtaMin = getMinutes(selectedOption.eta);
 
   const travelEtaMin =
     durationMin !== null
-      ? Math.max(
-          1,
-          Math.ceil(
-            durationMin *
-            (VEHICLE_SPEED_FACTOR[selectedOption.id] ?? 1)
-          )
-        )
+      ? Math.max(1, Math.ceil(durationMin * (VEHICLE_SPEED_FACTOR[selectedOption.id] ?? 1)))
       : null;
 
   const deliveryEtaMin =
-    travelEtaMin !== null
-      ? pickupEtaMin + PICKUP_PREPARATION_MIN + travelEtaMin
-      : null;
+    travelEtaMin !== null ? pickupEtaMin + PICKUP_PREPARATION_MIN + travelEtaMin : null;
 
   const pickupArrivalTime = new Date(
     estimateBaseTime + pickupEtaMin * 60_000
-  ).toLocaleTimeString("en-NG", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  ).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
 
   const deliveryArrivalTime =
     deliveryEtaMin !== null
-      ? new Date(
-          estimateBaseTime + deliveryEtaMin * 60_000
-        ).toLocaleTimeString("en-NG", {
+      ? new Date(estimateBaseTime + deliveryEtaMin * 60_000).toLocaleTimeString(undefined, {
           hour: "numeric",
           minute: "2-digit",
           hour12: true,
@@ -230,28 +250,26 @@ export default function RideOptionsScreen({
   return (
     <View style={{ flex: 1, backgroundColor: "#06090F", paddingBottom: insets.bottom }}>
       {/* TOP ROUTE SUMMARY BAR */}
-      <View 
-        style={{ paddingTop: Math.max(insets.top, 12) }} 
-        className="px-5 pb-3 flex-row items-center justify-between border-b border-slate-800/80 bg-[#06090F] z-10"
+      <View
+        style={{ paddingTop: Math.max(insets.top, 12) }}
+        className="px-5 pb-3 flex-row items-center justify-between border-b border-slate-800 bg-[#06090F] z-10"
       >
         <TouchableOpacity
           onPress={onBack}
-          className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700/80 items-center justify-center shadow-md"
+          className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700 items-center justify-center"
           activeOpacity={0.8}
         >
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <View className="flex-1 mx-3 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl flex-row items-center justify-between shadow-inner">
-          <View className="flex-1 mr-2">
-            <Text className="text-white text-xs font-bold" numberOfLines={1}>
-              {route.pickup.name} → {route.dropoff.name}
-            </Text>
-          </View>
+        <View className="flex-1 mx-3 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl">
+          <Text style={styles.headerRouteText} numberOfLines={1}>
+            {route.pickup.name} → {route.dropoff.name}
+          </Text>
         </View>
       </View>
 
-      {/* LIVE MAPBOX MAP VIEW WITH ROUTE LINE */}
+      {/* MAP VIEW */}
       <View className="flex-1 bg-slate-950 relative">
         <Mapbox.MapView
           style={{ flex: 1 }}
@@ -293,7 +311,7 @@ export default function RideOptionsScreen({
               <Mapbox.MarkerView id="pickupMarker" coordinate={pickupCoords!}>
                 <View className="items-center">
                   <View className="bg-emerald-500 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs font-bold">Pickup</Text>
+                    <Text style={styles.badgeText}>Pickup</Text>
                   </View>
                   <View className="w-4 h-4 rounded-full bg-emerald-500 border-2 border-white mt-1" />
                 </View>
@@ -307,7 +325,7 @@ export default function RideOptionsScreen({
                       style={{ width: 55, height: 55 }}
                       resizeMode="contain"
                     />
-                    <Text className="text-white text-[10px] font-bold mt-1 bg-[#090D16] px-2 py-1 rounded-lg" numberOfLines={1}>
+                    <Text style={styles.dropoffLabel} numberOfLines={1}>
                       {route.dropoff.name}
                     </Text>
                   </View>
@@ -317,31 +335,30 @@ export default function RideOptionsScreen({
           )}
         </Mapbox.MapView>
 
-        {/* FLOATING ETA BADGE */}
-        <View className="absolute top-4 left-4 bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl flex-row items-center shadow-xl">
+        {/* ETA BADGE */}
+        <View className="absolute top-4 left-4 bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-2xl flex-row items-center">
           <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2.5" />
-          <Text className="text-slate-200 text-xs font-bold">
+          <Text style={styles.etaBadgeText}>
             {routeLoading
-              ? "Calculating road route..."
+              ? "Calculating route..."
               : routeError
               ? routeError
               : distanceKm !== null && durationMin !== null
-              ? `${distanceKm.toFixed(1)} km • ${Math.ceil(durationMin)} min estimated driving`
+              ? `${distanceKm.toFixed(1)} km • ${Math.ceil(durationMin)} min drive`
               : "Route unavailable"}
           </Text>
         </View>
       </View>
 
-      {/* BOTTOM VEHICLE TIER SHEET */}
-      <View className="bg-[#090D16] border-t border-slate-800 rounded-t-[32px] px-5 pt-4 pb-5 shadow-2xl">
+      {/* BOTTOM SHEET */}
+      <View className="bg-[#090D16] border-t border-slate-800 rounded-t-[32px] px-5 pt-4 pb-5">
         <View style={{ width: 50, height: 4, borderRadius: 10, backgroundColor: "#475569", alignSelf: "center", marginBottom: 16 }} />
 
-        {/* ESTIMATED TIMES */}
         <View className="mb-4">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-white text-base font-extrabold">Estimated delivery times</Text>
+            <Text style={styles.sectionTitle}>Estimated delivery times</Text>
             <View className="bg-emerald-500/10 px-2.5 py-1 rounded-lg">
-              <Text className="text-emerald-400 text-[10px] font-bold">ESTIMATED</Text>
+              <Text style={styles.estimatedTag}>ESTIMATED</Text>
             </View>
           </View>
 
@@ -349,26 +366,26 @@ export default function RideOptionsScreen({
             <View className="flex-1 bg-[#111B2A] border border-emerald-500/20 rounded-2xl p-3">
               <View className="flex-row items-center mb-2">
                 <Ionicons name="location-outline" size={16} color="#10B981" />
-                <Text className="text-slate-400 text-xs ml-1.5">Rider pickup</Text>
+                <Text style={styles.timeLabel}>Rider pickup</Text>
               </View>
-              <Text className="text-white text-xl font-black">{pickupEtaMin} min</Text>
-              <Text className="text-emerald-400 text-xs mt-1 font-semibold">Around {pickupArrivalTime}</Text>
+              <Text style={styles.timeValue}>{pickupEtaMin} min</Text>
+              <Text style={styles.timeSub}>Around {pickupArrivalTime}</Text>
             </View>
 
             <View className="flex-1 bg-[#111B2A] border border-rose-500/20 rounded-2xl p-3">
               <View className="flex-row items-center mb-2">
                 <Ionicons name="flag-outline" size={16} color="#E11D48" />
-                <Text className="text-slate-400 text-xs ml-1.5">Package delivery</Text>
+                <Text style={styles.timeLabel}>Delivery</Text>
               </View>
-              <Text className="text-white text-xl font-black">{deliveryEtaMin !== null ? `${deliveryEtaMin} min` : "--"}</Text>
-              <Text className="text-rose-400 text-xs mt-1 font-semibold">{deliveryArrivalTime ? `Around ${deliveryArrivalTime}` : "Calculating..."}</Text>
+              <Text style={styles.timeValue}>{deliveryEtaMin !== null ? `${deliveryEtaMin} min` : "--"}</Text>
+              <Text style={styles.timeSubRed}>{deliveryArrivalTime ? `Around ${deliveryArrivalTime}` : "Calculating..."}</Text>
             </View>
           </View>
         </View>
 
         {/* VEHICLE LIST */}
         <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-          {RIDE_OPTIONS.map((option) => {
+          {rideOptions.map((option) => {
             const isSelected = selectedId === option.id;
 
             return (
@@ -380,44 +397,39 @@ export default function RideOptionsScreen({
                   }
                 }}
                 activeOpacity={0.85}
-                className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 transition-all ${
-                  isSelected
-                    ? "bg-[#161D31] border-[#E11D48] shadow-lg shadow-rose-900/20"
-                    : "bg-slate-900/80 border-slate-800"
-                }`}
+                style={[
+                  styles.vehicleCard,
+                  isSelected ? styles.vehicleCardSelected : styles.vehicleCardNormal,
+                ]}
               >
                 <View className="flex-row items-center flex-1">
                   <Image source={option.image} style={{ width: 64, height: 48 }} resizeMode="contain" />
                   <View className="ml-4 flex-1">
                     <View className="flex-row items-center">
-                      <Text className="text-white text-base font-extrabold">{option.name}</Text>
+                      <Text style={styles.vehicleName}>{option.name}</Text>
                       {option.badge && (
                         <View className="ml-2 bg-emerald-500/20 px-2 py-0.5 rounded-md">
-                          <Text className="text-emerald-400 text-[9px] font-black tracking-widest uppercase">
-                            {option.badge}
-                          </Text>
+                          <Text style={styles.badgeLabel}>{option.badge}</Text>
                         </View>
                       )}
                     </View>
-                    <Text className="text-slate-400 text-xs font-medium mt-0.5">
-                      {option.category}
-                    </Text>
+                    <Text style={styles.vehicleCategory}>{option.category}</Text>
                   </View>
                 </View>
 
                 <View className="items-end">
-                  <Text className="text-white text-lg font-black">{option.price}</Text>
+                  <Text style={styles.vehiclePrice}>{option.price}</Text>
                 </View>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* PAYMENT & CONFIRM BUTTON BAR */}
-        <View className="pt-3 border-t border-slate-800/80 flex-row items-center justify-between mt-2">
+        {/* CONFIRM BUTTON */}
+        <View className="pt-3 border-t border-slate-800 flex-row items-center justify-between mt-2">
           <TouchableOpacity className="bg-slate-900 border border-slate-800 px-4 py-3.5 rounded-2xl flex-row items-center mr-3" activeOpacity={0.8}>
             <Ionicons name="wallet-outline" size={18} color="#10B981" style={{ marginRight: 6 }} />
-            <Text className="text-white font-bold text-sm">{paymentMethod}</Text>
+            <Text style={styles.walletText}>{paymentMethod}</Text>
             <Ionicons name="chevron-down" size={14} color="#94A3B8" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
 
@@ -425,11 +437,9 @@ export default function RideOptionsScreen({
             disabled={!canConfirm}
             onPress={handleVehicleConfirm}
             activeOpacity={0.85}
-            className={`flex-1 rounded-2xl py-4 flex-row items-center justify-center ${
-              canConfirm ? "bg-[#E11D48]" : "bg-slate-700 opacity-60"
-            }`}
+            style={[styles.confirmButton, !canConfirm && styles.confirmButtonDisabled]}
           >
-            <Text className="text-white font-black text-base">
+            <Text style={styles.confirmButtonText}>
               {isConfirming
                 ? "Please wait..."
                 : routeLoading
@@ -448,3 +458,27 @@ export default function RideOptionsScreen({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRouteText: { color: "#FFFFFF", fontSize: 13, fontWeight: "600" },
+  badgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  dropoffLabel: { color: "#FFFFFF", fontSize: 10, fontWeight: "700", marginTop: 4, backgroundColor: "#090D16", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  etaBadgeText: { color: "#E2E8F0", fontSize: 12, fontWeight: "600" },
+  sectionTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  estimatedTag: { color: "#34D399", fontSize: 10, fontWeight: "700" },
+  timeLabel: { color: "#94A3B8", fontSize: 12, marginLeft: 6 },
+  timeValue: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginTop: 2 },
+  timeSub: { color: "#34D399", fontSize: 12, marginTop: 2, fontWeight: "600" },
+  timeSubRed: { color: "#F43F5E", fontSize: 12, marginTop: 2, fontWeight: "600" },
+  vehicleCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, marginBottom: 12, borderRadius: 16, borderWidth: 2 },
+  vehicleCardSelected: { backgroundColor: "#161D31", borderColor: "#E11D48" },
+  vehicleCardNormal: { backgroundColor: "rgba(15, 23, 42, 0.8)", borderColor: "#1E293B" },
+  vehicleName: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  badgeLabel: { color: "#34D399", fontSize: 9, fontWeight: "800", textTransform: "uppercase" },
+  vehicleCategory: { color: "#94A3B8", fontSize: 12, marginTop: 2 },
+  vehiclePrice: { color: "#FFFFFF", fontSize: 17, fontWeight: "900" },
+  walletText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  confirmButton: { flex: 1, backgroundColor: "#E11D48", borderRadius: 16, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  confirmButtonDisabled: { backgroundColor: "#334155", opacity: 0.6 },
+  confirmButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
+});
